@@ -1,15 +1,38 @@
+#!/bin/bash
+
+usage()
+{
+  echo "musisz podać parametry audycji --show-code --show-date --live"   
+}
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -c | --show-code )        shift
+                              export SHOW_CODE=$1
+                              ;;
+    -d | --show-date )        shift
+                              export SHOW_DATE=$1
+                              ;;
+    -l | --live )             shift
+                              export SHOW_LIVE=$1
+                              ;;
+    * )                       usage
+                              exit 1
+  esac
+  shift
+done
+
 INFLUX_ORGANIZATION="RadioAktywne"
-SHOW_TITLE="Fast Forward Charts"
-SHOW_CODE="fastforward"
-SHOW_DATE="2021-05-30"
+SHOW_TITLE=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .name' | sed 's/\"//g'`
+START_HOUR=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startHour'`
+START_MINUTES=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startMinutes'`
+END_HOUR=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endHour'`
+END_MINUTES=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endMinutes'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
-START_HOUR="18"
-START_MINUTES="00"
-END_HOUR="20"
-END_MINUTES="00"
 SHOW_DURATION_IN_MINUTES=`echo $(expr $(expr $END_HOUR \* 60 + $END_MINUTES ) - $(expr $START_HOUR \* 60 + $START_MINUTES ))`
-START_HOUR_TO_QUERY=`echo $(expr $START_HOUR - $TIME_SHIFT)`
-END_HOUR_TO_QUERY=`echo $(expr $END_HOUR - $TIME_SHIFT)`
+
+START_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
+END_TO_QUERY=`date -d "$SHOW_DATE $END_HOUR:$END_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
 
 #MIN
 MIN=`curl -sS --request POST  \
@@ -18,7 +41,7 @@ MIN=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"ra-stats")
-        |> range(start: '$SHOW_DATE'T'$START_HOUR_TO_QUERY':'$START_MINUTES':00Z, stop: '$SHOW_DATE'T'$END_HOUR_TO_QUERY':'$END_MINUTES':00Z)
+        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: min)
         |> timeShift(duration: '$TIME_SHIFT'h)
@@ -32,7 +55,7 @@ MEAN=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"ra-stats")
-        |> range(start: '$SHOW_DATE'T'$START_HOUR_TO_QUERY':'$START_MINUTES':00Z, stop: '$SHOW_DATE'T'$END_HOUR_TO_QUERY':'$END_MINUTES':00Z)
+        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: mean)
         |> map(fn: (r) => ({
@@ -50,7 +73,7 @@ MAX=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"ra-stats")
-        |> range(start: '$SHOW_DATE'T'$START_HOUR_TO_QUERY':'$START_MINUTES':00Z, stop: '$SHOW_DATE'T'$END_HOUR_TO_QUERY':'$END_MINUTES':00Z)
+        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
@@ -63,7 +86,7 @@ TABLE_DEBUG=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"ra-stats")
-        |> range(start: '$SHOW_DATE'T'$START_HOUR_TO_QUERY':'$START_MINUTES':00Z, stop: '$SHOW_DATE'T'$END_HOUR_TO_QUERY':'$END_MINUTES':00Z)
+        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: 1m, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
@@ -76,19 +99,29 @@ TABLE=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"ra-stats")
-        |> range(start: '$SHOW_DATE'T'$START_HOUR_TO_QUERY':'$START_MINUTES':00Z, stop: '$SHOW_DATE'T'$END_HOUR_TO_QUERY':'$END_MINUTES':00Z)
+        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: 1m, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | cut -d 'T' -f 2 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p'`
 
-echo '<h1>'$SHOW_TITLE' - słuchalność z dnia '$SHOW_DATE'</h1>
+if [ "$SHOW_LIVE" == "false" ]; then
+  POWTORKI="powtórki "
+else
+  POWTORKI=""
+fi
+
+echo '<h1>'$SHOW_TITLE' - słuchalność '$POWTORKI'z dnia '$SHOW_DATE'</h1>
 
 <style>
 table {
   font-family: arial, sans-serif;
   border-collapse: collapse;
+}
+
+h1, h2 {
+  text-align: center;
 }
 
 td, th {
@@ -132,5 +165,14 @@ echo "$TABLE"  | awk 'BEGIN { print "<br> <h2>Słuchalność minuta po minucie</
 
 mv $SHOW_DATE-$SHOW_CODE.html /stats-results/$SHOW_DATE-$SHOW_CODE.html
 mv $SHOW_DATE-$SHOW_CODE.jpg /stats-results/$SHOW_DATE-$SHOW_CODE.jpg
+
+pushd /stats-results/
+pandoc \
+ -V margin-left=0pt \
+ -V margin-top=36pt \
+ -V margin-bottom=60pt \
+ -V margin-right=0pt \
+ /stats-results/$SHOW_DATE-$SHOW_CODE.html -o /stats-results/$SHOW_DATE-$SHOW_CODE.pdf
+popd
 
 rm -f mydata.txt

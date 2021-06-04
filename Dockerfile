@@ -1,7 +1,16 @@
 FROM influxdb:2.0.6
 
 RUN apt-get update && \
-    apt-get -y install jq procps vim net-tools supervisor
+    apt-get -y install jq \
+    procps \
+    vim \
+    net-tools \
+    supervisor \
+    gnuplot-x11 \
+    pandoc \
+    pdflatex \
+    texlive-latex-base \
+    texlive-latex-extra
 
 ADD script.sh /stats/script.sh
 RUN chmod +x /stats/script.sh
@@ -15,7 +24,7 @@ ENV RA_ADDRESS listen.radioaktywne.pl
 ENV TZ Europe/Warsaw
 
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-ADD ramowka.json /stats/ramowka.json
+#ADD ramowka.json /stats/ramowka.json
 
 ENTRYPOINT ["/usr/bin/supervisord"]
 EXPOSE 8086 8088
