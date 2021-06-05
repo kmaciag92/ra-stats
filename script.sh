@@ -29,13 +29,14 @@ RA_SHOW_LIVE=""
 
 while true
 do
-RA_SHOW_OLD=$RA_SHOW_ID
+RA_SHOW_OLD=$RA_SHOW_ID_PLANNED
 RA_LIVE_OLD=$RA_SHOW_LIVE
 RAOGG_LISTENERS=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg").listeners'`
 RAMP3_LISTENERS=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/ramp3").listeners'`
 RA_LISTENERS=$(expr $RAOGG_LISTENERS + $RAMP3_LISTENERS)
 
 RA_SHOW_ID=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .id" | sed 's/\"//g'`
+RA_SHOW_ID_PLANNED=$RA_SHOW_ID
 RA_SHOW_LIVE=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .live" | sed 's/\"//g'`
 RA_SHOW_NAME=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .name" | sed 's/\"//g'`
 
@@ -49,7 +50,7 @@ if [ -z "$RA_SHOW_ID" ]; then
   RA_SHOW_ID="playlista"
 fi
 
-if [ "$RA_SHOW_OLD" != "$RA_SHOW_ID" && "$RA_SHOW_OLD" != "playlista" ]; then
+if [ "$RA_SHOW_OLD" != "$RA_SHOW_ID_PLANNED" && "$RA_SHOW_OLD" != "playlista" ]; then
   NOW_WEEKDAY=`date +%w`
   SHOW_WEEKDAY=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'$RA_SHOW_OLD'") | select(.live=='$RA_LIVE_OLD') | .weekDay'`
   if [ "$NOW_WEEKDAY" != "$SHOW_WEEKDAY" ]; then

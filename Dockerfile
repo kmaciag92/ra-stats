@@ -12,6 +12,9 @@ RUN apt-get update && \
     texlive-latex-base \
     texlive-latex-extra
 
+RUN wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
+RUN apt-get install ./wkhtmltox_0.12.6-1.focal_amd64.deb
+
 ADD script.sh /stats/script.sh
 RUN chmod +x /stats/script.sh
 

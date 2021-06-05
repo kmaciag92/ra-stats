@@ -112,9 +112,13 @@ else
   POWTORKI=""
 fi
 
-echo '<h1>'$SHOW_TITLE' - słuchalność '$POWTORKI'z dnia '$SHOW_DATE'</h1>
+echo '<head><style>
 
-<style>
+.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 table {
   font-family: arial, sans-serif;
   border-collapse: collapse;
@@ -126,12 +130,16 @@ h1, h2 {
 
 td, th {
     border: 1px solid #000000;
-    text-align: left;
+    text-align: center;
     padding: 8px;
+    font-size: 30px;
   }
 </style>
+</head>
 
-<table>
+<body>
+<center><h1>'$SHOW_TITLE' - słuchalność '$POWTORKI'z dnia '$SHOW_DATE'</h1></center>
+<table class="center">
   <tr>
     <th>Minimum</th>
     <th>Średnia</th>
@@ -159,20 +167,16 @@ plot 'mydata.txt' using 1:2 with linespoints linetype 6 linewidth 2;
 
 echo "<br> <img src="$SHOW_DATE-$SHOW_CODE".jpg>" >> $SHOW_DATE-$SHOW_CODE.html
 
-echo "$TABLE"  | awk 'BEGIN { print "<br> <h2>Słuchalność minuta po minucie</h2><table>" }
+echo "$TABLE"  | awk 'BEGIN { print "<br> <h2>Słuchalność minuta po minucie</h2><table class=\"center\">" }
      { print "<tr><td>" $1 "</td><td>" $2 "</td></tr>" }
-     END { print "</table>" }' >> $SHOW_DATE-$SHOW_CODE.html
+     END { print "</table></body>" }' >> $SHOW_DATE-$SHOW_CODE.html
 
 mv $SHOW_DATE-$SHOW_CODE.html /stats-results/$SHOW_DATE-$SHOW_CODE.html
 mv $SHOW_DATE-$SHOW_CODE.jpg /stats-results/$SHOW_DATE-$SHOW_CODE.jpg
 
 pushd /stats-results/
-pandoc \
- -V margin-left=0pt \
- -V margin-top=36pt \
- -V margin-bottom=60pt \
- -V margin-right=0pt \
- /stats-results/$SHOW_DATE-$SHOW_CODE.html -o /stats-results/$SHOW_DATE-$SHOW_CODE.pdf
+wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.pdf
+rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
 popd
 
 rm -f mydata.txt
