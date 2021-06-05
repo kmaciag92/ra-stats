@@ -7,13 +7,9 @@ RUN apt-get update && \
     net-tools \
     supervisor \
     gnuplot-x11 \
-    pandoc \
-    pdflatex \
     texlive-latex-base \
-    texlive-latex-extra
-
-RUN wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
-RUN apt-get install ./wkhtmltox_0.12.6-1.focal_amd64.deb
+    texlive-latex-extra \
+    wkhtmltopdf
 
 ADD script.sh /stats/script.sh
 RUN chmod +x /stats/script.sh
@@ -27,7 +23,6 @@ ENV RA_ADDRESS listen.radioaktywne.pl
 ENV TZ Europe/Warsaw
 
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-#ADD ramowka.json /stats/ramowka.json
 
 ENTRYPOINT ["/usr/bin/supervisord"]
 EXPOSE 8086 8088
