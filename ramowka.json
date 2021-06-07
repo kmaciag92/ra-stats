@@ -191,7 +191,7 @@
             "endMinutes": 30
         },
         {
-            "name": "Szuflada Dzwięków",
+            "name": "Szuflada Dźwięków",
             "id": "szuflada",
             "live": true,
             "weekDay": 1,
@@ -241,7 +241,7 @@
             "endMinutes": 0
         },
         {
-            "name": "Szuflada Dzwięków",
+            "name": "Szuflada Dźwięków",
             "id": "szuflada",
             "live": false,
             "weekDay": 2,

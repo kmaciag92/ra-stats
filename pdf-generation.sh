@@ -2,7 +2,7 @@
 
 usage()
 {
-  echo "musisz podać parametry audycji --show-code --show-date --live"   
+  echo "musisz podać parametry audycji --show-code --show-date --show-live"   
 }
 
 while [ "$1" != "" ]; do
@@ -13,7 +13,7 @@ while [ "$1" != "" ]; do
     -d | --show-date )        shift
                               export SHOW_DATE=$1
                               ;;
-    -l | --live )             shift
+    -l | --show-live )        shift
                               export SHOW_LIVE=$1
                               ;;
     * )                       usage
@@ -23,11 +23,11 @@ while [ "$1" != "" ]; do
 done
 
 INFLUX_ORGANIZATION="RadioAktywne"
-SHOW_TITLE=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .name' | sed 's/\"//g'`
-START_HOUR=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startHour'`
-START_MINUTES=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startMinutes'`
-END_HOUR=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endHour'`
-END_MINUTES=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endMinutes'`
+SHOW_TITLE=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .name' | sed 's/\"//g'`
+START_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startHour'`
+START_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startMinutes'`
+END_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endHour'`
+END_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endMinutes'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
 SHOW_DURATION_IN_MINUTES=`echo $(expr $(expr $END_HOUR \* 60 + $END_MINUTES ) - $(expr $START_HOUR \* 60 + $START_MINUTES ))`
 
@@ -79,19 +79,6 @@ MAX=`curl -sS --request POST  \
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1`
-
-TABLE_DEBUG=`curl -sS --request POST  \
-  http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
-  --header 'Authorization: Token '${INFLUX_TOKEN} \
-  --header 'Accept: application/csv' \
-  --header 'Content-type: application/vnd.flux' \
-  --data 'from(bucket:"ra-stats")
-        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
-        |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
-        |> aggregateWindow(every: 1m, fn: max)
-        |> timeShift(duration: '$TIME_SHIFT'h)
-        |> keep(columns: ["_time", "_value"])
-        |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | cut -d 'T' -f 2 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p'`
 
 TABLE=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
@@ -162,6 +149,7 @@ set title '$SHOW_TITLE - słuchalność w dniu $SHOW_DATE';
 set terminal jpeg size 1200,630;
 set output '$SHOW_DATE-$SHOW_CODE.jpg';
 set key off;
+set yrange [0:*];
 plot 'mydata.txt' using 1:2 with linespoints linetype 6 linewidth 2;
 "
 
@@ -178,5 +166,14 @@ pushd /stats-results/
 wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.pdf
 rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
 popd
+
+# jak już mamy MIN, MEAN i MAX to wrzucimy je do bucketu agregującego dane o słuchalnościach poszczególnych wydań audycji
+DATE_IN_NANOS=$(date -d "$SHOW_DATE $END_HOUR:$END_MINUTES:00 CEST" +%s)
+
+influx write \
+    -b ra-stats-per-show \
+    -o $INFLUX_ORGANIZATION \
+    -p s \
+    'max,show='${RA_SHOW_ID}',live='${RA_SHOW_LIVE}' min='${MIN}',mean='${MEAN}',max='${MAX}' '$DATE_IN_NANOS
 
 rm -f mydata.txt

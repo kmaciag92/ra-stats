@@ -7,9 +7,14 @@ RUN apt-get update && \
     net-tools \
     supervisor \
     gnuplot-x11 \
-    texlive-latex-base \
-    texlive-latex-extra \
-    wkhtmltopdf
+    wkhtmltopdf \
+    locales \
+    libreoffice-help-common
+
+RUN locale-gen pl_PL.UTF-8
+ENV LANG pl_PL.UTF-8
+ENV LANGUAGE pl_PL.UTF-8
+ENV LC_ALL pl_PL.UTF-8
 
 ADD script.sh /stats/script.sh
 RUN chmod +x /stats/script.sh

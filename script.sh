@@ -38,22 +38,36 @@ RA_LISTENERS=$(expr $RAOGG_LISTENERS + $RAMP3_LISTENERS)
 RA_SHOW_ID=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .id" | sed 's/\"//g'`
 RA_SHOW_ID_PLANNED=$RA_SHOW_ID
 RA_SHOW_LIVE=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .live" | sed 's/\"//g'`
+RA_SHOW_LIVE_PLANNED=$RA_SHOW_LIVE
 RA_SHOW_NAME=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .name" | sed 's/\"//g'`
 
 RA_TAG=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg") | if .artist == "" or .artist == null then .title else .artist + " - "  + .title end' | sed 's/\"//g'`
+RA_TAG_COMPRESSED=`echo ${RA_TAG,,} | sed -e 's/[ |'"'"'|\#|\||]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g'`
+RA_TAG_COMPRESSED=`echo ${RA_TAG_COMPRESSED,,} | cut -b -5`
 
-if [[ "$RA_TAG" != *"$RA_SHOW_NAME"* ]]; then
+if [[ "${RA_TAG_COMPRESSED,,}" != "`echo ${RA_SHOW_ID,,} | cut -b -5`" ]]; then
   RA_SHOW_ID="playlista"
+  RA_SHOW_LIVE="false"
 fi
 
 if [ -z "$RA_SHOW_ID" ]; then
   RA_SHOW_ID="playlista"
+  RA_SHOW_LIVE="false"
 fi
 
-if [ "$RA_SHOW_OLD" != "$RA_SHOW_ID_PLANNED" && "$RA_SHOW_OLD" != "playlista" ]; then
+if [ -z "$RA_SHOW_ID_PLANNED" ]; then
+  RA_SHOW_ID_PLANNED="playlista"
+  RA_SHOW_LIVE_PLANNED="false"
+fi
+
+#echo $(date) ${RA_SHOW_OLD,,} ${RA_SHOW_ID_PLANNED,,}
+if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID_PLANNED,,}" && "${RA_SHOW_OLD,,}" != "playlista" ]]; then
+  #echo $(date) ${RA_SHOW_OLD,,} ${RA_SHOW_ID_PLANNED,,} "- wszedłem do warunku"
   NOW_WEEKDAY=`date +%w`
-  SHOW_WEEKDAY=`cat ramowka.json | jq '.ramowka | .[] | select(.id=="'$RA_SHOW_OLD'") | select(.live=='$RA_LIVE_OLD') | .weekDay'`
+  SHOW_WEEKDAY=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.id==\"$RA_SHOW_OLD\") | select(.live==${RA_LIVE_OLD}) | .weekDay"`
+  #echo "$NOW_WEEKDAY $SHOW_WEEKDAY"
   if [ "$NOW_WEEKDAY" != "$SHOW_WEEKDAY" ]; then
+    #echo "$NOW_WEEKDAY $SHOW_WEEKDAY - wszedłem do warunku (if)"
     case $SHOW_WEEKDAY in
       0 )
         RA_SHOW_DATE=`date -d "Last Sunday" +%Y-%m-%d`
@@ -78,13 +92,11 @@ if [ "$RA_SHOW_OLD" != "$RA_SHOW_ID_PLANNED" && "$RA_SHOW_OLD" != "playlista" ];
         ;;
     esac
   else
+    #echo "$NOW_WEEKDAY $SHOW_WEEKDAY - wszedłem do warunku (else)"
     RA_SHOW_DATE=`date +%Y-%m-%d`
   fi
-  
-  /stats/pdf-generation.sh \
-  --show-code $RA_SHOW_OLD \
-  --show-date $RA_SHOW_DATE \
-  --show-live $RA_SHOW_LIVE &
+  echo "/stats/pdf-generation.sh --show-code $RA_SHOW_OLD --show-date $RA_SHOW_DATE --show-live $RA_LIVE_OLD &"
+  /stats/pdf-generation.sh --show-code $RA_SHOW_OLD --show-date $RA_SHOW_DATE --show-live $RA_LIVE_OLD &
 fi
 
 DATE_IN_NANOS=$(date +%s)
