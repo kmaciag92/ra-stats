@@ -23,6 +23,8 @@ while [ "$1" != "" ]; do
 done
 
 INFLUX_ORGANIZATION="RadioAktywne"
+BUCKET_NAME="ra-stats"
+BUCKET_NAME_FOR_RETENTION="ra-stats-per-show"
 SHOW_TITLE=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .name' | sed 's/\"//g'`
 START_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startHour'`
 START_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .startMinutes'`
@@ -30,9 +32,14 @@ END_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CO
 END_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='$SHOW_LIVE') | .endMinutes'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
 SHOW_DURATION_IN_MINUTES=`echo $(expr $(expr $END_HOUR \* 60 + $END_MINUTES ) - $(expr $START_HOUR \* 60 + $START_MINUTES ))`
+SHOW_DATE_FOR_ENDING=$SHOW_DATE
+if [[ $END_HOUR -ge 24 ]]; then
+  END_HOUR=$(expr $END_HOUR - 24)
+  SHOW_DATE_FOR_ENDING=`date -d $SHOW_DATE +1 day`
+fi
 
 START_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
-END_TO_QUERY=`date -d "$SHOW_DATE $END_HOUR:$END_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
+END_TO_QUERY=`date -d "$SHOW_DATE_FOR_ENDING $END_HOUR:$END_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
 
 #MIN
 MIN=`curl -sS --request POST  \
@@ -40,7 +47,7 @@ MIN=`curl -sS --request POST  \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
-  --data 'from(bucket:"ra-stats")
+  --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: min)
@@ -54,7 +61,7 @@ MEAN=`curl -sS --request POST  \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
-  --data 'from(bucket:"ra-stats")
+  --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: mean)
@@ -72,7 +79,7 @@ MAX=`curl -sS --request POST  \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
-  --data 'from(bucket:"ra-stats")
+  --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: max)
@@ -80,18 +87,31 @@ MAX=`curl -sS --request POST  \
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1`
 
-TABLE=`curl -sS --request POST  \
+TABLE_TO_REPORT=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
-  --data 'from(bucket:"ra-stats")
+  --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> aggregateWindow(every: 1m, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | cut -d 'T' -f 2 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p'`
+
+TABLE_TO_GRAPH=`curl -sS --request POST  \
+  http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
+  --header 'Authorization: Token '${INFLUX_TOKEN} \
+  --header 'Accept: application/csv' \
+  --header 'Content-type: application/vnd.flux' \
+  --data 'from(bucket:"'${BUCKET_NAME}'")
+        |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
+        |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
+        |> aggregateWindow(every: 10s, fn: max)
+        |> timeShift(duration: '$TIME_SHIFT'h)
+        |> keep(columns: ["_time", "_value"])
+        |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p'`
 
 if [ "$SHOW_LIVE" == "false" ]; then
   POWTORKI="powtórki "
@@ -107,12 +127,13 @@ echo '<head><style>
 }
 
 table {
-  font-family: arial, sans-serif;
+  font-family: arial;
   border-collapse: collapse;
 }
 
 h1, h2 {
   text-align: center;
+  font-family: arial;
 }
 
 td, th {
@@ -122,6 +143,7 @@ td, th {
     font-size: 30px;
   }
 </style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 </head>
 
 <body>
@@ -139,12 +161,12 @@ td, th {
   </tr>
 </table>' > $SHOW_DATE-$SHOW_CODE.html
 
-echo "$TABLE" > mydata.txt
+echo "$TABLE_TO_GRAPH" > mydata.txt
 
 gnuplot -p -e "
 set xdata time;
-set timefmt \"%H:%M:%S\";
-set format x \"%H:%M\";
+set timefmt \"%Y-%m-%dT%H:%M:%S\";
+set format x \"%H:%M:%S\";
 set title '$SHOW_TITLE - słuchalność w dniu $SHOW_DATE';
 set terminal jpeg size 1200,630;
 set output '$SHOW_DATE-$SHOW_CODE.jpg';
@@ -155,7 +177,7 @@ plot 'mydata.txt' using 1:2 with linespoints linetype 6 linewidth 2;
 
 echo "<br> <img src="$SHOW_DATE-$SHOW_CODE".jpg>" >> $SHOW_DATE-$SHOW_CODE.html
 
-echo "$TABLE"  | awk 'BEGIN { print "<br> <h2>Słuchalność minuta po minucie</h2><table class=\"center\">" }
+echo "$TABLE_TO_REPORT"  | awk 'BEGIN { print "<br> <h2>Słuchalność minuta po minucie</h2><table class=\"center\">" }
      { print "<tr><td>" $1 "</td><td>" $2 "</td></tr>" }
      END { print "</table></body>" }' >> $SHOW_DATE-$SHOW_CODE.html
 
@@ -168,10 +190,10 @@ rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
 popd
 
 # jak już mamy MIN, MEAN i MAX to wrzucimy je do bucketu agregującego dane o słuchalnościach poszczególnych wydań audycji
-DATE_IN_NANOS=$(date -d "$SHOW_DATE $END_HOUR:$END_MINUTES:00 CEST" +%s)
+DATE_IN_NANOS=$(date -d "$SHOW_DATE_FOR_ENDING $END_HOUR:$END_MINUTES:00 CEST" +%s)
 
 influx write \
-    -b ra-stats-per-show \
+    -b $BUCKET_NAME_FOR_RETENTION \
     -o $INFLUX_ORGANIZATION \
     -p s \
     'max,show='${RA_SHOW_ID}',live='${RA_SHOW_LIVE}' min='${MIN}',mean='${MEAN}',max='${MAX}' '$DATE_IN_NANOS

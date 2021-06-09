@@ -42,10 +42,10 @@ RA_SHOW_LIVE_PLANNED=$RA_SHOW_LIVE
 RA_SHOW_NAME=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .name" | sed 's/\"//g'`
 
 RA_TAG=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg") | if .artist == "" or .artist == null then .title else .artist + " - "  + .title end' | sed 's/\"//g'`
-RA_TAG_COMPRESSED=`echo ${RA_TAG,,} | sed -e 's/[ |'"'"'|\#|\||]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g'`
-RA_TAG_COMPRESSED=`echo ${RA_TAG_COMPRESSED,,} | cut -b -5`
+RA_TAG_COMPRESSED=`echo ${RA_TAG,,} | sed -e 's/[ |'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g' | cut -b -5`
+RA_SHOW_NAME_COMPRESSED=`echo ${RA_SHOW_NAME,,} | sed -e 's/[ |'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g' | cut -b -5`
 
-if [[ "${RA_TAG_COMPRESSED,,}" != "`echo ${RA_SHOW_ID,,} | cut -b -5`" ]]; then
+if [[ "$RA_TAG_COMPRESSED" != "$RA_SHOW_NAME_COMPRESSED" ]]; then
   RA_SHOW_ID="playlista"
   RA_SHOW_LIVE="false"
 fi

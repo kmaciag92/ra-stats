@@ -151,7 +151,7 @@
             "endMinutes": 30
         },
         {
-            "name": "Skank'n'Funk",
+            "name": "Skank 'n' Funk",
             "id": "skank",
             "live": true,
             "weekDay": 1,
@@ -251,7 +251,7 @@
             "endMinutes": 0
         },
         {
-            "name": "Skank'n'Funk",
+            "name": "Skank 'n' Funk",
             "id": "skank",
             "live": false,
             "weekDay": 2,
