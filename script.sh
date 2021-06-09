@@ -60,14 +60,11 @@ if [ -z "$RA_SHOW_ID_PLANNED" ]; then
   RA_SHOW_LIVE_PLANNED="false"
 fi
 
-#echo $(date) ${RA_SHOW_OLD,,} ${RA_SHOW_ID_PLANNED,,}
+echo $(date) ${RA_SHOW_OLD,,} ${RA_SHOW_ID_PLANNED,,}
 if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID_PLANNED,,}" && "${RA_SHOW_OLD,,}" != "playlista" ]]; then
-  #echo $(date) ${RA_SHOW_OLD,,} ${RA_SHOW_ID_PLANNED,,} "- wszedłem do warunku"
   NOW_WEEKDAY=`date +%w`
   SHOW_WEEKDAY=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.id==\"$RA_SHOW_OLD\") | select(.live==${RA_LIVE_OLD}) | .weekDay"`
-  #echo "$NOW_WEEKDAY $SHOW_WEEKDAY"
   if [ "$NOW_WEEKDAY" != "$SHOW_WEEKDAY" ]; then
-    #echo "$NOW_WEEKDAY $SHOW_WEEKDAY - wszedłem do warunku (if)"
     case $SHOW_WEEKDAY in
       0 )
         RA_SHOW_DATE=`date -d "Last Sunday" +%Y-%m-%d`
@@ -92,7 +89,6 @@ if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID_PLANNED,,}" && "${RA_SHOW_OLD,,}" != "
         ;;
     esac
   else
-    #echo "$NOW_WEEKDAY $SHOW_WEEKDAY - wszedłem do warunku (else)"
     RA_SHOW_DATE=`date +%Y-%m-%d`
   fi
   echo "/stats/pdf-generation.sh --show-code $RA_SHOW_OLD --show-date $RA_SHOW_DATE --show-live $RA_LIVE_OLD &"

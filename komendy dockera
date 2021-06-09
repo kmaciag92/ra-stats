@@ -8,3 +8,5 @@ docker commit ra-stats stats:0.0.6-conf
 docker exec -ti ra-stats bash
 
 docker run -d -p 8086:8086 --name ra-stats -v /influxdb-engine:/var/lib/influxdb2 stats:0.0.11
+
+./pdf-generation.sh --show-code killer --show-date 2021-06-09 --show-live true
