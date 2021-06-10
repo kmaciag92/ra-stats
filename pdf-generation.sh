@@ -35,7 +35,7 @@ TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
 SHOW_DATE_FOR_ENDING=$SHOW_DATE
 if [[ $END_HOUR -ge 24 ]]; then
   END_HOUR=$(expr $END_HOUR - 24)
-  SHOW_DATE_FOR_ENDING=`date -d $SHOW_DATE +1 day`
+  SHOW_DATE_FOR_ENDING=`date -d "$SHOW_DATE +1 day" +%Y-%m-%d`
 fi
 
 START_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
@@ -114,7 +114,7 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p' | sed 's/\r//g'`
 
 if [ -z "$TABLE_TO_GRAPH" ]; then
-  echo "Audycja $SHOW_CODE się nie odbyła - nie generuję raportu"
+  echo "$SHOW_DATE - Audycja $SHOW_CODE się nie odbyła - nie generuję raportu"
   exit 0
 fi
 
@@ -172,7 +172,7 @@ gnuplot -p -e "
 set xdata time;
 set timefmt \"%Y-%m-%dT%H:%M:%S\";
 set format x \"%H:%M:%S\";
-set title '$SHOW_TITLE - słuchalność w dniu $SHOW_DATE';
+set title \"$SHOW_TITLE - słuchalność w dniu $SHOW_DATE\";
 set terminal jpeg size 1200,630;
 set output '$SHOW_DATE-$SHOW_CODE.jpg';
 set key off;
