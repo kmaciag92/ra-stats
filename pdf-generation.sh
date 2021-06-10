@@ -31,7 +31,7 @@ START_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SH
 END_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .endHour'`
 END_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .endMinutes'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
-SHOW_DURATION_IN_MINUTES=`echo $(expr $(expr $END_HOUR \* 60 + $END_MINUTES ) - $(expr $START_HOUR \* 60 + $START_MINUTES ))`
+#SHOW_DURATION_IN_MINUTES=`echo $(expr $(expr $END_HOUR \* 60 + $END_MINUTES ) - $(expr $START_HOUR \* 60 + $START_MINUTES ))`
 SHOW_DATE_FOR_ENDING=$SHOW_DATE
 if [[ $END_HOUR -ge 24 ]]; then
   END_HOUR=$(expr $END_HOUR - 24)
@@ -50,7 +50,7 @@ MIN=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
-        |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: min)
+        |> aggregateWindow(every: 24h, fn: min)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1 | sed 's/\r//g'`
@@ -64,7 +64,7 @@ MEAN=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
-        |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: mean)
+        |> aggregateWindow(every: 24h, fn: mean)
         |> map(fn: (r) => ({
           r with
           _value: float(v: int(v: r._value * 100.0)) / 100.0
@@ -82,7 +82,7 @@ MAX=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '$START_TO_QUERY', stop: '$END_TO_QUERY')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
-        |> aggregateWindow(every: '$SHOW_DURATION_IN_MINUTES'm, fn: max)
+        |> aggregateWindow(every: 24h, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1 | sed 's/\r//g'`
@@ -112,6 +112,11 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p' | sed 's/\r//g'`
+
+if [ -z "$TABLE_TO_GRAPH" ]; then
+  echo "Audycja $SHOW_CODE się nie odbyła - nie generuję raportu"
+  exit 0
+fi
 
 if [ "$SHOW_LIVE" == "false" ]; then
   POWTORKI="powtórki "
@@ -191,7 +196,7 @@ popd
 
 # jak już mamy MIN, MEAN i MAX to wrzucimy je do bucketu agregującego dane o słuchalnościach poszczególnych wydań audycji
 DATE_IN_NANOS=$(date -d "$SHOW_DATE_FOR_ENDING $END_HOUR:$END_MINUTES:00 CEST" +%s)
-echo ${MIN}${MEAN}${MAX} > txt.txt
+
 influx write \
     -b $BUCKET_NAME_FOR_RETENTION \
     -o $INFLUX_ORGANIZATION \

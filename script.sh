@@ -30,7 +30,7 @@ RA_SHOW_LIVE=""
 while true
 do
 RA_SHOW_OLD=$RA_SHOW_ID_PLANNED
-RA_LIVE_OLD=$RA_SHOW_LIVE
+RA_LIVE_OLD=$RA_SHOW_LIVE_PLANNED
 RAOGG_LISTENERS=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg").listeners'`
 RAMP3_LISTENERS=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/ramp3").listeners'`
 RA_LISTENERS=$(expr $RAOGG_LISTENERS + $RAMP3_LISTENERS)
