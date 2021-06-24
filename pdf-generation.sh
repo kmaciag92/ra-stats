@@ -1,10 +1,12 @@
 #!/bin/bash
 
+#Instrukcja, która wyświetla się, gdy źle uruchomimy skrypt
 usage()
 {
   echo "musisz podać parametry audycji --show-code --show-date --show-live"   
 }
 
+#Pętla odpowiedzialna za odpowiednie ustawienie zmiennych odczytując parametry wejściowe
 while [ "$1" != "" ]; do
   case $1 in
     -c | --show-code )        shift
@@ -22,26 +24,35 @@ while [ "$1" != "" ]; do
   shift
 done
 
+#Tutaj ustawiamy stałe potrzebne w dalszej części skryptu
 INFLUX_ORGANIZATION="RadioAktywne"
 BUCKET_NAME="ra-stats"
 BUCKET_NAME_FOR_RETENTION="ra-stats-per-show"
+
+#Tu pobieramy z jsona ramówkowego dane o audycji potrzebne do wygenerowania raportu
 SHOW_TITLE=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .name' | sed 's/\"//g'`
 START_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .startHour'`
 START_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .startMinutes'`
 END_HOUR=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .endHour'`
 END_MINUTES=`cat /stats/ramowka.json | jq '.ramowka | .[] | select(.id=="'${SHOW_CODE}'") | select(.live=='${SHOW_LIVE}') | .endMinutes'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
-#SHOW_DURATION_IN_MINUTES=`echo $(expr $(expr $END_HOUR \* 60 + $END_MINUTES ) - $(expr $START_HOUR \* 60 + $START_MINUTES ))`
+
+#Czasami w ramówce jako godzina końcowa jest zapisana 24:00, żeby się skompilowało, więc rozwiązałem to tak, że gdy audycja kończy się o godzinie 0:00 to w miejscu 24, wpisujemy 0 i dodajemy jeden dzień. Nie możemy tu zostawić 24, bo gnuplotowi to przeszkadza. A gdy audycja się przedłuża (jak np. Czwarty Wymiar) to jest to wpis reprezentujący następną audycję.
 SHOW_DATE_FOR_ENDING=$SHOW_DATE
 if [[ $END_HOUR -ge 24 ]]; then
   END_HOUR=$(expr $END_HOUR - 24)
   SHOW_DATE_FOR_ENDING=`date -d "$SHOW_DATE +1 day" +%Y-%m-%d`
 fi
 
+#Tutaj tworzymy timestamp dla startu i zakończenia audycji, który wpiszemy do zapytań w influksie. Trzeba odjąć TIME_SHIFT wyliczony na podstawie aktualnej strefy czasowej, gdyż influx nie ogarnia stref czasowych w zapytaniach. Trzeba także przekonwertować je do odpowiedniego formatu
 START_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
 END_TO_QUERY=`date -d "$SHOW_DATE_FOR_ENDING $END_HOUR:$END_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%dT%H:%M:%SZ`
 
-#MIN
+#W poniższych zmiennych MIN, MEAN i MAX wyliczamy opisane w nazwach statystyki słuchalności. 
+#Stosujemy okno 24-godzinne, po to, żeby nie wygenerować dwóch wyników, z dwóch różnych okien, dlatego jest takie szerokie. 
+#Dodajemy parametr TIME_SHIFT w funkcji timeShift(), po to by w wynikach wyświetlały się już prawidłowe godziny. 
+#W MEAN użyłem funkcji map() po to, by uzyskany wynik pomnożyć przez 100, przekonwertować na liczbę całkowitą i podzielić przez 100, po to by wynik zawsze miał dwie cyfry po przecinku. 
+#Funkcje użyte po pipach są po to, żeby wyłuskać ze zwróconego stringa sam wynik i zapisać go do zmiennej
 MIN=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
@@ -55,7 +66,6 @@ MIN=`curl -sS --request POST  \
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1 | sed 's/\r//g'`
 
-#MEAN
 MEAN=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
@@ -73,7 +83,6 @@ MEAN=`curl -sS --request POST  \
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1 | sed 's/\r//g'`
 
-#MAX
 MAX=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
@@ -87,6 +96,9 @@ MAX=`curl -sS --request POST  \
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 5 | grep -v "_value" | head -n 1 | sed 's/\r//g'`
 
+#Tu na podobnej zasadzie generujemy tabelki wyników. 
+#TABLE_TO_REPORT jest wykorzystywany do tabelki, którą prześlemy na końcu raportu, a TABLE_TO_GRAPH jest użyty do stworzenia wykresu, który również zostanie umieszczony w raporcie. 
+#Różnią się tym, że ten pierwszy ma granulację co minutę, a ten drugi co 10 sekund.
 TABLE_TO_REPORT=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
   --header 'Authorization: Token '${INFLUX_TOKEN} \
@@ -113,17 +125,23 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p' | sed 's/\r//g'`
 
+# Jeśli tabela wyników jest pusta, bo wszystkie metryki zostały zapisane jako "playlista", to raport się nie wygeneruje
 if [ -z "$TABLE_TO_GRAPH" ]; then
   echo "$SHOW_DATE - Audycja $SHOW_CODE się nie odbyła - nie generuję raportu"
   exit 0
 fi
 
+# To jest zmienna tworzona tylko po to, żeby zaznaczyć w raporcie, że dotyczy on słuchalności powtórki
 if [ "$SHOW_LIVE" == "false" ]; then
   POWTORKI="powtórki "
 else
   POWTORKI=""
 fi
 
+#Tu zaczynamy tworzenie pliku html, na podstawie, którego stworzony zostanie ostateczny raport w PDFie.
+#W tej sekcji są ustawienia dotyczące stylu tego html, czyli rozmiaru czcionek i wyśrodkowania wszystkich elementów
+#Ważny jest tag <meta>, bo dzięki niemu działają polskie znaki w raportach
+#W tym miejscu jest generowana tabelka z wartościami MIN, MEAN i MAX
 echo '<head><style>
 
 .center {
@@ -166,8 +184,13 @@ td, th {
   </tr>
 </table>' > $SHOW_DATE-$SHOW_CODE.html
 
+#Tworzymy plik, w którym są dane potrzebne do generacji wykresu za pomocą gnuplota
 echo "$TABLE_TO_GRAPH" > mydata.txt
 
+#Tu tworzymy wykres słuchalności audycji w czasie
+#Określamy wpisany w tabelce format czasu (timefmt), potem określamy format czasu wyświetlony w tworzonym wykresie (set format)
+#Określamy tytuł wykresu, rozmiar, nazwę pliku wynikowego, wyłączamy legendę, ustawiamy skalę osi y, tak żeby zaczynała się od 0
+#i za pomocą polecenia "plot", tworzymy plik z wykresem
 gnuplot -p -e "
 set xdata time;
 set timefmt \"%Y-%m-%dT%H:%M:%S\";
@@ -180,21 +203,26 @@ set yrange [0:*];
 plot 'mydata.txt' using 1:2 with linespoints linetype 6 linewidth 2;
 "
 
+#Umieszczamy wykres w html'u
 echo "<br> <img src="$SHOW_DATE-$SHOW_CODE".jpg>" >> $SHOW_DATE-$SHOW_CODE.html
 
+#Tworzymy szczegółową tabelę o wynikach słuchalności i także ją umieszczamy w html'u
 echo "$TABLE_TO_REPORT"  | awk 'BEGIN { print "<br> <h2>Słuchalność minuta po minucie</h2><table class=\"center\">" }
      { print "<tr><td>" $1 "</td><td>" $2 "</td></tr>" }
      END { print "</table></body>" }' >> $SHOW_DATE-$SHOW_CODE.html
 
+#HTML'a i wykres przenosimy do folderu z raportami (/stats-results)
 mv $SHOW_DATE-$SHOW_CODE.html /stats-results/$SHOW_DATE-$SHOW_CODE.html
 mv $SHOW_DATE-$SHOW_CODE.jpg /stats-results/$SHOW_DATE-$SHOW_CODE.jpg
 
+#Przechodzimy do katalogu z raportami i tworzymy PDF'a na podstawie wcześniej wygenerowanego HTML'a, potem usuwamy i html'a i obrazek z wykresem i wracamy do wcześniejszego folderu
 pushd /stats-results/
 wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.pdf
 rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
 popd
 
 # jak już mamy MIN, MEAN i MAX to wrzucimy je do bucketu agregującego dane o słuchalnościach poszczególnych wydań audycji
+#Najpierw generujemy odpowiedni timestamp umieszczamy w zapytaniu do influxa, a potem wysyłamy zapytanie z zebranymi danymi
 DATE_IN_NANOS=$(date -d "$SHOW_DATE_FOR_ENDING $END_HOUR:$END_MINUTES:00 CEST" +%s)
 
 influx write \
@@ -203,4 +231,5 @@ influx write \
     -p s \
     'max,show='${SHOW_CODE}',live='${SHOW_LIVE}' min='${MIN}',mean='${MEAN}',max='${MAX}' '${DATE_IN_NANOS}
 
+#Na koniec usuwamy plik, który posłużył do zrobienia wykresu
 rm -f mydata.txt
