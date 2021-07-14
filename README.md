@@ -1,4 +1,4 @@
-RA-Stats
+<h1>RA-Stats</h1>
 
 Narzędzie do pobierania, przechowywania i prezentacji metryki słuchalności audycji w Radiu Aktywnym. Narzędzie jest przystosowane do działania jako kontener dockerowy. Składa się z trzech elementów:
 - Bazy danych influxDB, która służy do przechowywania wszystkich statystyk związanych ze słuchalnością przesyłanej przez pozostałe komponenty. Baza danych jest podzielona na dwa buckety:
