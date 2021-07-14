@@ -12,7 +12,7 @@ Dane o ramówce są pobierane z pliku `get_api_timeslots.json`. Docelowo będą 
 
 W repozytorium można znaleźć także aktualny dump bazy danych.
 
-Instrukcja uruchomienia:
+<h3>Instrukcja uruchomienia</h3>
 
 1. Do uruchomienia tego kontenera potrzebny jest daemon dockera zainstalowany na środowisku
 2. Stwórz w katalogu głównym roota katalog `influxdb-engine` i skopiuj tam zawartość katalogu `influxdb-engine` z repozytorium. Katalog będzie potem domontowany do kontenera jako katalog `/var/lib/influxdb2`
