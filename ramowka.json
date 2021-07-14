@@ -264,7 +264,7 @@
             "name": "Nostalgicznie",
             "id": "nostalgicznie",
             "live": true,
-            "weekDay": 2,
+            "weekDay": 4,
             "startHour": 17,
             "startMinutes": 30,
             "endHour": 18,
@@ -334,10 +334,10 @@
             "name": "Nostalgicznie",
             "id": "nostalgicznie",
             "live": false,
-            "weekDay": 3,
-            "startHour": 10,
+            "weekDay": 5,
+            "startHour": 11,
             "startMinutes": 0,
-            "endHour": 11,
+            "endHour": 12,
             "endMinutes": 0
         },
         {
