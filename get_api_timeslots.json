@@ -1,7 +1,7 @@
 {
     "f13a7906-c6fd-4695-81d9-0a31dc1602f7": {
         "weekday": 1,
-        "begin_h": 8,
+        "begin_h": 10,
         "begin_m": 0,
         "duration": 120,
         "program": {
@@ -23,7 +23,7 @@
     },
     "bd13e106-d8d5-4cff-9fbe-d88fd2cf27d9": {
         "weekday": 1,
-        "begin_h": 10,
+        "begin_h": 8,
         "begin_m": 0,
         "duration": 120,
         "program": {
