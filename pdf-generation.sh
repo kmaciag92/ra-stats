@@ -219,12 +219,12 @@ pushd /stats-results/
 wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.pdf
 rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
 #Tu dopisać kod przenoszący wygenerowany raport do katalogu w NextCloudzie
-#if [[ -d "/katalog_nextclouda_dla_audycji/sluchalnosc" ]]; then
-#  mv $SHOW_DATE-$SHOW_CODE.pdf /katalog_nextclouda_dla_audycji/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
-#else
-#  mkdir -p /katalog_nextclouda_dla_audycji/sluchalnosc
-#  mv $SHOW_DATE-$SHOW_CODE.pdf /katalog_nextclouda_dla_audycji/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
-#fi
+if [[ -d "/nextcloud/$SHOW_CODE/sluchalnosc" ]]; then
+  mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+else
+  mkdir -p /nextcloud/$SHOW_CODE/sluchalnosc
+  mv $SHOW_DATE-$SHOW_CODE.pdf /katalog_nextclouda_dla_audycji/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+fi
 popd
 
 # jak już mamy MIN, MEAN i MAX to wrzucimy je do bucketu agregującego dane o słuchalnościach poszczególnych wydań audycji

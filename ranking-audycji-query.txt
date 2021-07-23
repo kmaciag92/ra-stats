@@ -1,9 +1,0 @@
-from(bucket: "ra-stats-per-show")
-  |> range(start: -duration(v: 365d))
-  |> filter(fn: (r) =>
-    r._field == "mean"
-    )
-  |> group(columns: ["_show"])
-  |> sort(desc: true)
-  |> unique(column: "show")
-  |> keep(columns: ["_time", "show", "_value", "live"])
