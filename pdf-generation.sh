@@ -223,7 +223,7 @@ if [[ -d "/nextcloud/$SHOW_CODE/sluchalnosc" ]]; then
   mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
 else
   mkdir -p /nextcloud/$SHOW_CODE/sluchalnosc
-  mv $SHOW_DATE-$SHOW_CODE.pdf /katalog_nextclouda_dla_audycji/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+  mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
 fi
 popd
 
