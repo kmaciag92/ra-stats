@@ -124,6 +124,9 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p' | sed 's/\r//g'`
 
+START_TIME_TO_GRAPH=`echo "$TABLE_TO_GRAPH" | head -1 | cut -d ' ' -f 1`
+END_TIME_TO_GRAPH=`echo "$TABLE_TO_GRAPH" | tail -1 | cut -d ' ' -f 1`
+
 # Jeśli tabela wyników jest pusta, bo wszystkie metryki zostały zapisane jako "playlista", to raport się nie wygeneruje
 if [ -z "$TABLE_TO_GRAPH" ]; then
   echo "$SHOW_DATE - Audycja $SHOW_CODE się nie odbyła - nie generuję raportu"
@@ -198,6 +201,7 @@ set title \"$SHOW_TITLE - słuchalność w dniu $SHOW_DATE\";
 set terminal jpeg size 1200,630;
 set output '$SHOW_DATE-$SHOW_CODE.jpg';
 set key off;
+set xrange [\"$START_TIME_TO_GRAPH\":\"$END_TIME_TO_GRAPH\"];
 set yrange [0:*];
 plot 'mydata.txt' using 1:2 with linespoints linetype 6 linewidth 2;
 "
