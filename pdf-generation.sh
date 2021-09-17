@@ -37,10 +37,10 @@ else
 fi
 
 #Tu pobieramy z jsona ramówkowego dane o audycji potrzebne do wygenerowania raportu
-SHOW_TITLE=`cat /stats/get_api_timeslots.json | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .program.name ' | sed 's/\"//g'`
-START_HOUR=`cat /stats/get_api_timeslots.json | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_h ' | sed 's/\"//g'`
-START_MINUTES=`cat /stats/get_api_timeslots.json | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_m ' | sed 's/\"//g'`
-SHOW_DURATION=`cat /stats/get_api_timeslots.json | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .duration' | sed 's/\"//g'`
+SHOW_TITLE=`curl ${API_ADDRESS} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .program.name ' | sed 's/\"//g'`
+START_HOUR=`curl ${API_ADDRESS} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_h ' | sed 's/\"//g'`
+START_MINUTES=`curl ${API_ADDRESS} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_m ' | sed 's/\"//g'`
+SHOW_DURATION=`curl ${API_ADDRESS} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .duration' | sed 's/\"//g'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
 
 #Tutaj tworzymy timestamp dla startu i zakończenia audycji, który wpiszemy do zapytań w influksie. Trzeba odjąć TIME_SHIFT wyliczony na podstawie aktualnej strefy czasowej, gdyż influx nie ogarnia stref czasowych w zapytaniach. Trzeba także przekonwertować je do odpowiedniego formatu. Z tych timestampów trzeba także wziąć tylko datę startu i datę zakończenia audycji, ponieważ przewidujemy sytuację, że audycja mogła się zacząć wcześniej, bądź przedłużyć...

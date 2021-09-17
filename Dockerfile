@@ -26,6 +26,7 @@ ENV RASSWORD #FILL
 ENV INFLUX_TOKEN #FILL
 ENV RA_ADDRESS listen.radioaktywne.pl
 ENV TZ Europe/Warsaw
+ENV API_ADDRESS https://cloud.radioaktywne.pl/api/timeslots
 
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
