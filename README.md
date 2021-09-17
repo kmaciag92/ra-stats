@@ -8,7 +8,7 @@ Narzędzie do pobierania, przechowywania i prezentacji metryki słuchalności au
 zapisuje aktualną metrykę słuchalności w bazie danych, w buckecie `ra-stats` oznaczając ją odpowiednim tagiem.
 - Skryptu `pdf-generation.sh` - skrypt odpowiedzialny za generowanie raportów słuchalności, w których możemy znaleźć informacje o minimalnej, średniej i maksymalnej słuchalności danego wydania audycji, wykres słuchalności w zależności od czasu i tabelkę ze szczegółową słuchalnością. Pierwsze trzy informacje są także przesyłane w formie metryk do bucketu `ra-stats-per-show`, a raport jest przesyłany do odpowiedniego katalogu w NextCloudzie.
 
-Dane o ramówce są pobierane z pliku `get_api_timeslots.json`. Docelowo będą pobierane z wewnętrznego API ramówkowego.
+Dane o ramówce są pobierane z wewnętrznego API ramówkowego działającego pod adresem `cloud.radioaktywne.pl/api/timeslots`
 
 W repozytorium można znaleźć także aktualny dump bazy danych.
 
@@ -31,14 +31,13 @@ bądź w następnym punkcie uruchom go z inną nazwą
 docker run -d -p 8086:8086 --name ra-stats --dns 8.8.8.8 \
     -v /influxdb-engine:/var/lib/influxdb2  \
     -v /stats-results:/stats-results  \
-    -v /home/konrad/docker-projects/ra-stats/get_api_timeslots.json:/stats/get_api_timeslots.json  \
     -v /srv/ra/audycje:/nextcloud \
     stats:0.0.16
 ```
-Poza dwoma poprzednimi volumami domontowujemy jeszcze plik z ramówką do odpowiedniego katalogu w kontenerze i katalog z nextclouda.
+
 Dodatkowo udostępniamy port `8086` na którym działa influx, co nam umożliwia skorzystanie z API influxowej bazy danych, a także zmieniamy wewnątrzkontenerowy dns `8.8.8.8`, żeby uniknąć kłopotów z łącznością.
 7. Aby sprawdzić czy wszystko dobrze działa wyświetlamy sobie logi za pomocą polecenia
 ```
 docker logs ra-stats --tail 50 -f
 ```
-i patrzymy czy logi są przesyłane do bazy danych, a także wchodzimy na adres ```localhost:8086``` logujemy się loginem `ra-stats` i odpowiednim statsem i sprawdzamy na odpowiednim wykresie czy aktualne dane się wczytują
+i patrzymy czy logi są przesyłane do bazy danych, a także wchodzimy na adres ```localhost:8086``` logujemy się loginem `ra-stats` i odpowiednim hasłem i sprawdzamy na odpowiednim wykresie czy aktualne dane się wczytują
