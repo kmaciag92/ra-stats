@@ -43,10 +43,11 @@ START_HOUR=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${S
 START_MINUTES=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_m ' | sed 's/\"//g'`
 SHOW_DURATION=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .duration' | sed 's/\"//g'`
 TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
+TIME_ZONE=`echo $(date +%Z)`
 
 #Tutaj tworzymy timestamp dla startu i zakończenia audycji, który wpiszemy do zapytań w influksie. Trzeba odjąć TIME_SHIFT wyliczony na podstawie aktualnej strefy czasowej, gdyż influx nie ogarnia stref czasowych w zapytaniach. Trzeba także przekonwertować je do odpowiedniego formatu. Z tych timestampów trzeba także wziąć tylko datę startu i datę zakończenia audycji, ponieważ przewidujemy sytuację, że audycja mogła się zacząć wcześniej, bądź przedłużyć...
-START_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 CEST - $TIME_SHIFT hours" +%Y-%m-%d`
-END_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 CEST - $TIME_SHIFT hours + $SHOW_DURATION minutes" +%Y-%m-%d`
+START_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours" +%Y-%m-%d`
+END_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours + $SHOW_DURATION minutes" +%Y-%m-%d`
 
 #W poniższych zmiennych MIN, MEAN i MAX wyliczamy opisane w nazwach statystyki słuchalności. 
 #Stosujemy okno 24-godzinne, po to, żeby nie wygenerować dwóch wyników, z dwóch różnych okien, dlatego jest takie szerokie. 
