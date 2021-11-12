@@ -9,7 +9,7 @@
 #Najpierw sprawdzamy czy influx, który również jest na tym kontenerze jest już uruchomiony i gotowy do przyjmowania metryk
 influx_health=`curl localhost:8086`
 status=$?
-WEEK_DAY=4 && ACT_HOUR=18 && ACT_MINUTE=29
+
 while [[ $status -ne 0 ]]
 do
     echo "Waiting for influx starting at port 8086"
