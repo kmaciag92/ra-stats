@@ -1,0 +1,1 @@
+export A24H_MODE=true

@@ -160,7 +160,7 @@ if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID,,}" || "${RA_SHOW_ID_AS_PLANNED,,}" !=
     fi
     #Tutaj uruchamiamy skrypt generujący raport
     echo "Tworzenie raportu słuchalności dla audycji $RA_SHOW_OLD dnia $RA_SHOW_DATE"
-    /stats/pdf-generation.sh --show-code $RA_SHOW_OLD --show-date $RA_SHOW_DATE --show-live $RA_LIVE_OLD &
+    /stats/report-generation.sh --show-code $RA_SHOW_OLD --show-date $RA_SHOW_DATE --show-live $RA_LIVE_OLD &
   fi
 fi
 
