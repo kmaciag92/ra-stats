@@ -1,8 +1,5 @@
 #!/bin/bash
 
-INFLUX_ORGANIZATION=RadioAktywne
-INFLUX_TOKEN=QjR73YQ1Yd-a8KgaqHr7uQULQcLE9TCFIpUVDjGspglTuVw9h_1IMdVgFFFW9txc3DfxCJ2_IEtpTHylWebP1A==
-API_ADDRESS=https://cloud.radioaktywne.pl/api/timeslots
 PROGRAM_API_DATA=`curl ${API_ADDRESS}`
 REPORT_TIME=`date '+%Y-%m-%d %T'`
 GENERATED_FILE_NAME="tygodniowy_ranking"
