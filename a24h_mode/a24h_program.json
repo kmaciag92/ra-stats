@@ -1,0 +1,438 @@
+{
+"f1a6dcbc-1c6f-4ea1-aab0-d19b46690b3f": {
+    "weekday": 5,
+    "begin_h": 17,
+    "begin_m": 30,
+    "duration": 60,
+    "program": {
+        "slug": "powitanie",
+        "name": "Rozpoczęcie",
+        "rds": "Rozpoczęcie",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"74263ae2-45b4-4ed0-8ebb-a87ec31ac7ce": {
+    "weekday": 5,
+    "begin_h": 18,
+    "begin_m": 30,
+    "duration": 90,
+    "program": {
+        "slug": "piatek",
+        "name": "Aktywacja",
+        "rds": "Aktywacja Piątkowa",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"15aa74e0-31a2-4ea6-bfa9-b60e1c3ff321": {
+    "weekday": 5,
+    "begin_h": 20,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "letsplay",
+        "name": "Let's Play",
+        "rds": "Let's Play - wydanie specjalne",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"c65f3ad8-122f-4763-bcb3-9d35f3564d33": {
+    "weekday": 5,
+    "begin_h": 21,
+    "begin_m": 0,
+    "duration": 300,
+    "program": {
+        "slug": "czwarty",
+        "name": "Czwarty Wymiar",
+        "rds": "Czwarty Wymiar",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"c65f3ad8-122f-4763-bcb3-9d35f3564d3a": {
+    "weekday": 6,
+    "begin_h": 2,
+    "begin_m": 0,
+    "duration": 180,
+    "program": {
+        "slug": "plniezal",
+        "name": "Z archiwum polskiej muzyki niezaleznej XXI wieku",
+        "rds": "Z archiwum polskiej muzyki niezaleznej XXI wieku",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"c65f3ad8-122f-4763-bcb3-9d35f35s3a": {
+    "weekday": 6,
+    "begin_h": 5,
+    "begin_m": 0,
+    "duration": 180,
+    "program": {
+        "slug": "djset",
+        "name": "Poranek z DJsetem",
+        "rds": "Poranek z DJsetem",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"65f3ad8-122f-4763-bcb3-9d35f35s3a": {
+    "weekday": 6,
+    "begin_h": 8,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "ballin",
+        "name": "Early Morning Ballin",
+        "rds": "Early Morning Ballin",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"3e5360b6-fef5-447b-a4cb-f00ca4eb0500": {
+    "weekday": 6,
+    "begin_h": 9,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "podroze",
+        "name": "Podróże Małe i Duże",
+        "rds": "Podróże Małe i Duże",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"b7f31dcc-4e75-437b-9e73-bfe84b9b82a5": {
+    "weekday": 6,
+    "begin_h": 10,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "przyslug",
+        "name": "Przysługoatletyka",
+        "rds": "Przysługoatletyka",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"5982373a-528b-47de-8277-9c05a1c07232": {
+    "weekday": 6,
+    "begin_h": 11,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "smiejsie",
+        "name": "Śmiej się pan z tego",
+        "rds": "Śmiej się pan z tego",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"43a5f388-cd93-4318-99b4-64ebb245a611": {
+    "weekday": 6,
+    "begin_h": 12,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "nieuslyszane",
+        "name": "Nieusłyszane",
+        "rds": "Nieusłyszane",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"13a5f388-cd93-4318-99b4-64ebb245a611": {
+    "weekday": 6,
+    "begin_h": 13,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "swobodny",
+        "name": "Swobodny Wymiar",
+        "rds": "Swobodny Wymiar",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"2a5f388-cd93-4318-99b4-64ebb245a611": {
+    "weekday": 6,
+    "begin_h": 15,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "radioturniej",
+        "name": "Radioturniej",
+        "rds": "Radioturniej",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"2fd84b15-c4f8-4ef3-ae4e-b8718e9de0c2": {
+    "weekday": 6,
+    "begin_h": 16,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "rozmowa",
+        "name": "Rozmowa wieku wczesnego",
+        "rds": "Rozmowa Wieku Wczesnego",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"c639063d-ca38-4b45-8d32-0c5c0c654ab4": {
+    "weekday": 6,
+    "begin_h": 18,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "sobota",
+        "name": "Aktywacja Sobotnia",
+        "rds": "Aktywacja Sobotnia",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"aa6101b9-ea89-40cc-8f60-e27041ef501f": {
+    "weekday": 6,
+    "begin_h": 20,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "funnygirls",
+        "name": "Funny Girls",
+        "rds": "Funny Girls",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"84d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 6,
+    "begin_h": 21,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "darkwave",
+        "name": "Let's Meet The Darkwave",
+        "rds": "Let's Meet The Darkwave",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"24d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 6,
+    "begin_h": 22,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "retrodisco",
+        "name": "Retro Disco",
+        "rds": "Retro Disco",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"34d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 7,
+    "begin_h": 0,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "screenshot",
+        "name": "Screen Shot",
+        "rds": "Screen Shot",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"44d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 7,
+    "begin_h": 1,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "konieclata",
+        "name": "Koniec Lata",
+        "rds": "Koniec Lata",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"54d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 7,
+    "begin_h": 2,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "tylkodla",
+        "name": "Tylko Dla Wtajemniczonych",
+        "rds": "Tylko Dla Wtajemniczonych",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"64d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 7,
+    "begin_h": 3,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "numetal",
+        "name": "Viva Nu Metal",
+        "rds": "Viva Nu Metal",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"74d078cb-01c3-4114-998d-50f7fd037c8c": {
+    "weekday": 7,
+    "begin_h": 5,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "biurko",
+        "name": "Biurko",
+        "rds": "Biurko",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"c6757e05-a8bc-493c-a797-0f549b1f9f17": {
+    "weekday": 7,
+    "begin_h": 7,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "borderline",
+        "name": "Borderline Breakfast Club",
+        "rds": "Borderline Breakfast Club",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"12670c50-0db2-4cc2-9819-c992b3fe286a": {
+    "weekday": 7,
+    "begin_h": 9,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "ukryte",
+        "name": "Ukryte w Reykjaviku",
+        "rds": "Ukryte w Reykjaviku",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"32670c50-0db2-4cc2-9819-c992b3fe286a": {
+    "weekday": 7,
+    "begin_h": 11,
+    "begin_m": 0,
+    "duration": 60,
+    "program": {
+        "slug": "lostmedia",
+        "name": "Lost Media",
+        "rds": "Lost Media",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"fd424a2c-4fe5-43e6-92be-ce8dc08be642": {
+    "weekday": 7,
+    "begin_h": 12,
+    "begin_m": 0,
+    "duration": 180,
+    "program": {
+        "slug": "rocznik",
+        "name": "Rocznik Muzyczny",
+        "rds": "Rocznik Muzyczny",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"623fbb90-5cd1-424e-9ccf-3502ab0ebb5e": {
+    "weekday": 7,
+    "begin_h": 15,
+    "begin_m": 0,
+    "duration": 120,
+    "program": {
+        "slug": "zapraszaja",
+        "name": "Andrzej i Krzysztof Zapraszają",
+        "rds": "Andrzej i Krzysztof Zapraszają",
+        "description": null,
+        "people": [],
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+},
+"ef7bd268-c248-4ad1-8f38-fd74e72e8bfa": {
+    "weekday": 7,
+    "begin_h": 17,
+    "begin_m": 0,
+    "duration": 180,
+    "program": {
+        "slug": "fastforward",
+        "name": "Fast Forward Charts #800",
+        "rds": "Fast Forward Charts #800",
+        "description": null,
+        "website_visible": true,
+        "broadcast_visible": true
+    },
+    "replay": false
+}
+}

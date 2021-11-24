@@ -24,11 +24,23 @@ while [ "$1" != "" ]; do
   shift
 done
 
+if [[ -f ${A24H_SETTINGS_FILE} ]]; then
+  A24H_TAG=`cat ${A24H_SETTINGS_FILE} | jq .tag | sed -e s/\"//g`
+  if [[ "$A24H_TAG"="$SHOW_LIVE" ]]; then
+    A24H_MODE="true"
+  fi
+fi
+
 #Tutaj ustawiamy stałe potrzebne w dalszej części skryptu
 INFLUX_ORGANIZATION="RadioAktywne"
 BUCKET_NAME="ra-stats"
 BUCKET_NAME_FOR_RETENTION="ra-stats-per-show"
-PROGRAM_API_DATA=`curl ${API_ADDRESS}`
+
+if [[ "${A24H_MODE}"=="true" ]]; then
+  PROGRAM_API_DATA=`cat ${A24H_PROGRAM_FILE}`
+else
+  PROGRAM_API_DATA=`curl ${API_ADDRESS}`
+fi
 
 #Wprowadzamy zmienną SHOW_REPLAY, która jest negacją SHOW_LIVE, SHOW_LIVE jest używany w bazie do przypisywania "true" premierowym wydaniom audycji, za to SHOW_REPLAY w jsonie ramówkowym przyjmuje "true" gdy audycja jest powtórką
 if [[ "$SHOW_LIVE" == "false" ]]; then
@@ -62,6 +74,7 @@ MIN=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
+        |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 48h, fn: min)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
@@ -75,6 +88,7 @@ MEAN=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
+        |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 48h, fn: mean)
         |> map(fn: (r) => ({
           r with
@@ -92,6 +106,7 @@ MAX=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
+        |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 48h, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
@@ -108,8 +123,11 @@ TABLE_TO_REPORT=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
+        |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 1m, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
+        |> group(columns: ["_time"])
+        |> sort(columns: ["_time"], desc: false)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | cut -d 'T' -f 2 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p' | sed 's/\r//g'`
 
@@ -121,8 +139,11 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
   --data 'from(bucket:"'${BUCKET_NAME}'")
         |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
+        |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 10s, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
+        |> group(columns: ["_time"])
+        |> sort(columns: ["_time"], desc: false)
         |> keep(columns: ["_time", "_value"])
         |> drop(columns: ["result", "table"])' | cut -d ',' -f 4-5 | grep -v value | sed -En 's/Z//p' | sed -En 's/,/ /p' | sed 's/\r//g'`
 
@@ -139,6 +160,9 @@ fi
 if [ "$SHOW_LIVE" == "false" ]; then
   POWTORKI="powtórki "
 else
+  if [ "$SHOW_LIVE" == "${A24H_TAG}" ]; then
+    POWTORKI="audycji podczas specjalnej ramówki "
+  fi
   POWTORKI=""
 fi
 
@@ -224,12 +248,21 @@ mv $SHOW_DATE-$SHOW_CODE.jpg /stats-results/$SHOW_DATE-$SHOW_CODE.jpg
 pushd /stats-results/
 wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.pdf
 rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
-#Tu dopisać kod przenoszący wygenerowany raport do katalogu w NextCloudzie
-if [[ -d "/nextcloud/$SHOW_CODE/sluchalnosc" ]]; then
-  mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+#Kod przenoszący wygenerowany raport do katalogu w NextCloudzie
+if [[ "${A24H_MODE}" == "true" ]]; then
+  if [[ -d "${A24H_DIR}/raporty" ]]; then
+    mv $SHOW_DATE-$SHOW_CODE.pdf ${A24H_DIR}/raporty/$SHOW_DATE-$SHOW_CODE.pdf
+  else
+    mkdir -p ${A24H_DIR}/raporty
+    mv $SHOW_DATE-$SHOW_CODE.pdf ${A24H_DIR}/raporty/$SHOW_DATE-$SHOW_CODE.pdf
+  fi
 else
-  mkdir -p /nextcloud/$SHOW_CODE/sluchalnosc
-  mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+  if [[ -d "/nextcloud/$SHOW_CODE/sluchalnosc" ]]; then
+    mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+  else
+    mkdir -p /nextcloud/$SHOW_CODE/sluchalnosc
+    mv $SHOW_DATE-$SHOW_CODE.pdf /nextcloud/$SHOW_CODE/sluchalnosc/$SHOW_DATE-$SHOW_CODE.pdf
+  fi
 fi
 popd
 
