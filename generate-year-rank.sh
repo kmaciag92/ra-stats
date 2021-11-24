@@ -17,6 +17,10 @@ RANKING=`curl -sS --request POST  \
   |> filter(fn: (r) =>
     r._field == "mean"
     )
+  |> filter(fn: (r) =>
+      r.live == "true" or
+      r.live == "false"
+  )
   |> group(columns: ["_show"])
   |> sort(desc: true)
   |> unique(column: "show")
@@ -85,9 +89,9 @@ wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $GENERATED_FILE_NAME.h
 
 rm $GENERATED_FILE_NAME.html
 
-if [[ -d "/rankingi" ]]; then
-  mv $GENERATED_FILE_NAME.pdf /rankingi/$GENERATED_FILE_NAME.pdf
+if [[ -d "${RANKS_DIR}" ]]; then
+  mv $GENERATED_FILE_NAME.pdf ${RANKS_DIR}/$GENERATED_FILE_NAME.pdf
 else
-  mkdir -p /rankingi
-  mv $GENERATED_FILE_NAME.pdf /rankingi/$GENERATED_FILE_NAME.pdf
+  mkdir -p ${RANKS_DIR}
+  mv $GENERATED_FILE_NAME.pdf ${RANKS_DIR}/$GENERATED_FILE_NAME.pdf
 fi

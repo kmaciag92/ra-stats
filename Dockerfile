@@ -16,7 +16,6 @@ RUN locale-gen pl_PL.UTF-8
 ENV LANG pl_PL.UTF-8
 ENV LANGUAGE pl_PL.UTF-8
 ENV LC_ALL pl_PL.UTF-8
-ENV A24H_MODE false
 
 ADD gathering-script.sh /stats/gathering-script.sh
 RUN chmod +x /stats/gathering-script.sh
@@ -35,12 +34,15 @@ RUN chmod +x /stats/generate-year-rank.sh
 RUN crontab -l | { cat; echo "30 2 * * * /stats/generate-year-rank.sh"; } | crontab -
 RUN crontab -l | { cat; echo "20 2 * * * /stats/generate-week-rank.sh"; } | crontab -
 
-ENV RASSWORD radioniedziala
-ENV INFLUX_TOKEN QjR73YQ1Yd-a8KgaqHr7uQULQcLE9TCFIpUVDjGspglTuVw9h_1IMdVgFFFW9txc3DfxCJ2_IEtpTHylWebP1A==
+ENV RASSWORD #FILL
+ENV INFLUX_TOKEN #FILL
 ENV RA_ADDRESS listen.radioaktywne.pl
 ENV TZ Europe/Warsaw
 ENV API_ADDRESS https://cloud.radioaktywne.pl/api/timeslots
-
+ENV RANKS_DIR /rankingi
+ENV A24H_DIR /a24h_io
+ENV A24H_SETTINGS_FILE ${A24H_DIR}/a24h_setting.json
+ENV A24H_PROGRAM_FILE ${A24H_DIR}/a24h_program.json
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 ENTRYPOINT ["/usr/bin/supervisord"]

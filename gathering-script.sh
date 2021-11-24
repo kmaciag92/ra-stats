@@ -36,6 +36,7 @@ influx config create --config-name ra-stats \
 #Tu rozpoczyna się pętla odpowiedzialna za rejestrację danych o słuchalności
 while true
 do
+DATE_IN_SECONDS=$(date +%s)
 #Te sześć zmiennych są potrzebne do przechowywania audycji, która trwała w poprzedniej iteracji sprawdzania słuchalności. Na jej podstawie sprawdzamy, czy można już wygenerować raport
 RA_SHOW_OLD=$RA_SHOW_ID
 RA_LIVE_OLD=$RA_SHOW_LIVE
@@ -43,8 +44,25 @@ RA_TAG_OLD=$RA_TAG
 RA_SHOW_REPLAY_OLD=$RA_SHOW_REPLAY
 RA_SHOW_ID_AS_PLANNED_OLD=$RA_SHOW_ID_AS_PLANNED
 
+if [[ -f ${A24H_SETTINGS_FILE} ]]; then
+  start_a24h_time=`date -d "$(cat ${A24H_SETTINGS_FILE} | jq .startTime | sed -e s/\"//g)"  +%s`
+  end_a24h_time=`date -d "$(cat ${A24H_SETTINGS_FILE} | jq .endTime | sed -e s/\"//g)" +%s`
+  if [[ $start_a24h_time < $DATE_IN_SECONDS && $end_a24h_time > $DATE_IN_SECONDS ]]; then
+    export A24H_MODE="true"
+    export A24H_TAG=`cat ${A24H_SETTINGS_FILE} | jq .tag | sed -e s/\"//g`
+  else
+    export A24H_MODE="false"
+  fi
+else 
+  export A24H_MODE="false"
+fi
+
 RA_STREAM_DATA=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl`
-PROGRAM_API_DATA=`curl ${API_ADDRESS}`
+if [[ "${A24H_MODE}"=="true" ]]; then
+  PROGRAM_API_DATA=`cat ${A24H_PROGRAM_FILE}`
+else
+  PROGRAM_API_DATA=`curl ${API_ADDRESS}`
+fi
 
 #RAOGG_LISTENERS to zmienna w której zapisujemy aktualną liczbę słuchaczy streamu "raogg" z icecasta, RAMP3_LISTENERS to zmienna w której zapisujemy aktualną liczbę słuchaczy streamu "ramp3" z icecasta, a RA_LISTENERS to suma tych dwóch zmiennych
 RAOGG_LISTENERS=`echo $RA_STREAM_DATA | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg").listeners'`
@@ -84,26 +102,21 @@ if [[ "$RA_TAG_COMPRESSED" != *"$RA_SHOW_RDS_COMPRESSED"* ]]; then
   fi
 fi
 
-#Przed dostosowaniem się do API ramówkowego RA używałem, zmiennej RA_SHOW_LIVE, która przyjmowała true jak audycja była na żywo, albo była puszką w nowym wydaniu w ramówce i false jak była powtórką. By nie rozkopywać całej logiki audycji postanowiłem zrobić prostą negację zmiennej RA_SHOW_REPLAY z API ramówkowego RA
+#Przed dostosowaniem się do API ramówkowego RA używałem, zmiennej RA_SHOW_LIVE, która przyjmowała true jak audycja była na żywo, albo była puszką w nowym wydaniu w ramówce i false jak była powtórką. By nie zmieniać całej logiki skryptu postanowiłem zrobić prostą negację zmiennej RA_SHOW_REPLAY z API ramówkowego RA
 if [[ "$RA_SHOW_REPLAY" == "false" ]]; then
   RA_SHOW_LIVE="true"
+  if [[ "${A24H_MODE}" == "true" && -n ${A24H_TAG} ]]; then
+    RA_SHOW_LIVE=${A24H_TAG}
+  fi
 else
   RA_SHOW_LIVE="false"
 fi
-
-#RA_SHOW_ID_PLANNED=$RA_SHOW_ID
-#RA_SHOW_LIVE_PLANNED=$RA_SHOW_LIVE
-#RA_SHOW_ID=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .id" | sed 's/\"//g'`
-#RA_SHOW_LIVE=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .live" | sed 's/\"//g'`
-#RA_SHOW_NAME=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.weekDay==$(date +%w)) | select (.startHour*60+.startMinutes <= $(expr $(date +%H) \* 60 + $(date +%M)) and .endHour*60+.endMinutes > $(expr $(date +%H) \* 60 + $(date +%M))) | .name" | sed 's/\"//g'`
 
 #Jeśli o danej porze nie jest zaplanowana żadna audycja, to wynik słuchalności zostanie przypisany playliście.
 if [ -z "$RA_SHOW_ID" ]; then
   RA_SHOW_ID="playlista"
   RA_SHOW_LIVE="false"
   RA_SHOW_REPLAY="true"
-  #RA_SHOW_ID_PLANNED="playlista"
-  #RA_SHOW_LIVE_PLANNED="false"
 fi
 
 if [ -z "$RA_SHOW_ID_AS_PLANNED" ]; then
@@ -111,6 +124,8 @@ if [ -z "$RA_SHOW_ID_AS_PLANNED" ]; then
 fi
 
 echo $(date) "RA_TAG=$RA_TAG"
+#echo $(date) "A24H_MODE=$A24H_MODE"
+#echo $(date) "A24H_TAG=$A24H_TAG"
 #echo $(date) "RA_TAG_COMPRESSED=$RA_TAG_COMPRESSED"
 #echo $(date) "RA_SHOW_ID=$RA_SHOW_ID"
 #echo $(date) "RA_SHOW_OLD=$RA_SHOW_OLD"
