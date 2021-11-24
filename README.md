@@ -15,8 +15,11 @@ W repozytorium można znaleźć także aktualny dump bazy danych.
 <h3>Instrukcja poprawnego uruchomienia</h3>
 
 1.	Pobierz aktualny kod aplikacji z jednego z dwóch repozytoriów:
+
 a.	https://github.com/kmaciag92/ra-stats
+
 b.	https://github.com/RadioAktywne/ra-stats 
+
 2.	Zainstaluj i uruchom aplikację docker, tak aby można było za jej pośrednictwem zbudować i uruchomić kontener
 3.	Sprawdź czy w katalogu `influxdb-engine`, znajduje się aktualny dump bazy danych. Jeśli nie, stwórz w katalogu głównym roota katalog influxdb-engine i skopiuj tam zawartość katalogu `influxdb-engine` z repozytorium. Katalog będzie potem domontowany do kontenera jako katalog `/var/lib/influxdb2`. 
 4.	Stwórz w katalogu głównym roota katalog `stats-results` tam będą tymczasowo przechowywane wygenerowane raporty. Katalog potem będzie domontowany do kontenera jako katalog `/stats-results`
@@ -38,10 +41,14 @@ bądź w następnym punkcie uruchom go z inną nazwą
     -v /stats-results:/stats-results  \
     -v /srv/ra/audycje:/nextcloud \
     stats:0.0.16`
+
 Wykonanie powyższego polecenia udostępniasz port 8086 na którym działa baza influxDB, co nam umożliwia skorzystanie z jej API, a także zmienia adres dns używany przez kontener na `8.8.8.8`, żeby uniknąć kłopotów z łącznością. 
+
 Aby działały dodatkowe funkcje, takie jak generowanie rankingów w formie plików PDF i „A24H mode”, należy także zamontować odpowiednie katalogi dostępne z zewnątrz kontenera, w których będzie można odczytywać bądź zapisywać pliki potrzebne do obsługi tych funkcji
+
     `-v /<folder dostępny w nextcloudzie z którego będzie można pobrać pliki z aktualnymi rankingami>:/rankingi  \
     -v <folder w którym znajdzie się tymczasowa ramówka w formie pliku z określonym czasem jej obowiązywania>:/a24h_io \`
+
 8.	Aby sprawdzić czy wszystko dobrze działa wyświetl logi z kontenera za pomocą polecenia
 
 `docker logs ra-stats --tail 50 -f`
