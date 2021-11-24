@@ -46,8 +46,8 @@ Wykonanie powyższego polecenia udostępniasz port 8086 na którym działa baza 
 
 Aby działały dodatkowe funkcje, takie jak generowanie rankingów w formie plików PDF i „A24H mode”, należy także zamontować odpowiednie katalogi dostępne z zewnątrz kontenera, w których będzie można odczytywać bądź zapisywać pliki potrzebne do obsługi tych funkcji
 
-    `-v /<folder dostępny w nextcloudzie z którego będzie można pobrać pliki z aktualnymi rankingami>:/rankingi  \
-    -v <folder w którym znajdzie się tymczasowa ramówka w formie pliku z określonym czasem jej obowiązywania>:/a24h_io \`
+    -v /<folder dostępny w nextcloudzie z którego będzie można pobrać pliki z aktualnymi rankingami>:/rankingi  \
+    -v <folder w którym znajdzie się tymczasowa ramówka w formie pliku z określonym czasem jej obowiązywania>:/a24h_io \
 
 8.	Aby sprawdzić czy wszystko dobrze działa wyświetl logi z kontenera za pomocą polecenia
 
