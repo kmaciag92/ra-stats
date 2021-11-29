@@ -9,15 +9,21 @@ usage()
 #Pętla odpowiedzialna za odpowiednie ustawienie zmiennych odczytując parametry wejściowe
 while [ "$1" != "" ]; do
   case $1 in
-    -c | --show-code )        shift
-                              export MANUAL_SHOW_CODE=$1
+    -s | --show-start )       shift
+                              export SHOW_START=$1
                               ;;
     -d | --show-date )        shift
                               export SHOW_DATE=$1
                               ;;
-    -l | --show-live )        shift
+    -e | --show-end )         shift
+                              export SHOW_END=$1
+                              ;;        
+    -c | --show-code )         shift
+                              export SHOW_CODE=$1
+                              ;;      
+    -l | --show-live )         shift
                               export SHOW_LIVE=$1
-                              ;;
+                              ;;          
     * )                       usage
                               exit 1
   esac
@@ -49,9 +55,6 @@ TIME_ZONE=`echo $(date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00" +%Z)`
 START_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours" +%Y-%m-%d`
 END_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours + $SHOW_DURATION minutes" +%Y-%m-%d`
 
-START_TIME_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours" +%T`
-END_TIME_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours + $SHOW_DURATION minutes" +%T`
-
 #W poniższych zmiennych MIN, MEAN i MAX wyliczamy opisane w nazwach statystyki słuchalności. 
 #Stosujemy okno 24-godzinne, po to, żeby nie wygenerować dwóch wyników, z dwóch różnych okien, dlatego jest takie szerokie. 
 #Dodajemy parametr TIME_SHIFT w funkcji timeShift(), po to by w wynikach wyświetlały się już prawidłowe godziny. 
@@ -63,7 +66,7 @@ MIN=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T${START_TIME_TO_QUERY}Z', stop: '${END_DATE_TO_QUERY}T${END_TIME_TO_QUERY}Z')
+        |> range(start: '${START_DATE_TO_QUERY}T${SHOW_START}Z', stop: '${END_DATE_TO_QUERY}T${SHOW_END}Z')
         |> aggregateWindow(every: 48h, fn: min)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
@@ -75,7 +78,7 @@ MEAN=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T${START_TIME_TO_QUERY}Z', stop: '${END_DATE_TO_QUERY}T${END_TIME_TO_QUERY}Z')
+        |> range(start: '${START_DATE_TO_QUERY}T${SHOW_START}Z', stop: '${END_DATE_TO_QUERY}T${SHOW_END}Z')
         |> aggregateWindow(every: 48h, fn: mean)
         |> map(fn: (r) => ({
           r with
@@ -91,7 +94,7 @@ MAX=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T${START_TIME_TO_QUERY}Z', stop: '${END_DATE_TO_QUERY}T${END_TIME_TO_QUERY}Z')
+        |> range(start: '${START_DATE_TO_QUERY}T${SHOW_START}Z', stop: '${END_DATE_TO_QUERY}T${SHOW_END}Z')
         |> aggregateWindow(every: 48h, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> keep(columns: ["_time", "_value"])
@@ -106,7 +109,7 @@ TABLE_TO_REPORT=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T${START_TIME_TO_QUERY}Z', stop: '${END_DATE_TO_QUERY}T${END_TIME_TO_QUERY}Z')
+        |> range(start: '${START_DATE_TO_QUERY}T${SHOW_START}Z', stop: '${END_DATE_TO_QUERY}T${SHOW_END}Z')
         |> aggregateWindow(every: 1m, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> group(columns: ["_time"])
@@ -120,7 +123,7 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T${START_TIME_TO_QUERY}Z', stop: '${END_DATE_TO_QUERY}T${END_TIME_TO_QUERY}Z')
+        |> range(start: '${START_DATE_TO_QUERY}T${SHOW_START}Z', stop: '${END_DATE_TO_QUERY}T${SHOW_END}Z')
         |> aggregateWindow(every: 10s, fn: max)
         |> timeShift(duration: '$TIME_SHIFT'h)
         |> group(columns: ["_time"])

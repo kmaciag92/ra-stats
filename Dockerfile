@@ -31,11 +31,14 @@ RUN chmod +x /stats/generate-week-rank.sh
 ADD generate-year-rank.sh /stats/generate-year-rank.sh
 RUN chmod +x /stats/generate-year-rank.sh
 
+ADD a24h_io/a24h_setting.json /a24h_io/a24h_setting.json
+ADD a24h_io/a24h_program.json /a24h_io/a24h_program.json
+
 RUN crontab -l | { cat; echo "30 2 * * * /stats/generate-year-rank.sh"; } | crontab -
 RUN crontab -l | { cat; echo "20 2 * * * /stats/generate-week-rank.sh"; } | crontab -
 
-ENV RASSWORD #FILL
-ENV INFLUX_TOKEN #FILL
+ENV RASSWORD radioniedziala
+ENV INFLUX_TOKEN QjR73YQ1Yd-a8KgaqHr7uQULQcLE9TCFIpUVDjGspglTuVw9h_1IMdVgFFFW9txc3DfxCJ2_IEtpTHylWebP1A==
 ENV RA_ADDRESS listen.radioaktywne.pl
 ENV TZ Europe/Warsaw
 ENV API_ADDRESS https://cloud.radioaktywne.pl/api/timeslots

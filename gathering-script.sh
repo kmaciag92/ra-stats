@@ -58,7 +58,7 @@ else
 fi
 
 RA_STREAM_DATA=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl`
-if [[ "${A24H_MODE}"=="true" ]]; then
+if [[ "${A24H_MODE}" == "true" ]]; then
   PROGRAM_API_DATA=`cat ${A24H_PROGRAM_FILE}`
 else
   PROGRAM_API_DATA=`curl ${API_ADDRESS}`
@@ -124,20 +124,20 @@ if [ -z "$RA_SHOW_ID_AS_PLANNED" ]; then
 fi
 
 echo $(date) "RA_TAG=$RA_TAG"
-#echo $(date) "A24H_MODE=$A24H_MODE"
-#echo $(date) "A24H_TAG=$A24H_TAG"
-#echo $(date) "RA_TAG_COMPRESSED=$RA_TAG_COMPRESSED"
-#echo $(date) "RA_SHOW_ID=$RA_SHOW_ID"
-#echo $(date) "RA_SHOW_OLD=$RA_SHOW_OLD"
-#echo $(date) "RA_SHOW_ID_AS_PLANNED=$RA_SHOW_ID_AS_PLANNED"
-#echo $(date) "RA_SHOW_ID_AS_PLANNED_OLD=$RA_SHOW_ID_AS_PLANNED_OLD"
-#echo $(date) "RA_SHOW_LIVE=$RA_SHOW_LIVE"
-#echo $(date) "RA_SHOW_REPLAY=$RA_SHOW_REPLAY"
-#echo $(date) "RA_SHOW_REPLAY_OLD=$RA_SHOW_REPLAY_OLD"
-#echo $(date) "RA_SHOW_RDS=$RA_SHOW_RDS"
-#echo $(date) "NEXT_SHOW_RDS=$NEXT_SHOW_RDS"
-#echo $(date) "NEXT_SHOW_RDS_COMPRESSED=$NEXT_SHOW_RDS_COMPRESSED"
-#echo $(date) "PREVIOUS_SHOW_RDS=$PREVIOUS_SHOW_RDS"
+echo $(date) "A24H_MODE=$A24H_MODE"
+echo $(date) "A24H_TAG=$A24H_TAG"
+echo $(date) "RA_TAG_COMPRESSED=$RA_TAG_COMPRESSED"
+echo $(date) "RA_SHOW_ID=$RA_SHOW_ID"
+echo $(date) "RA_SHOW_OLD=$RA_SHOW_OLD"
+echo $(date) "RA_SHOW_ID_AS_PLANNED=$RA_SHOW_ID_AS_PLANNED"
+echo $(date) "RA_SHOW_ID_AS_PLANNED_OLD=$RA_SHOW_ID_AS_PLANNED_OLD"
+echo $(date) "RA_SHOW_LIVE=$RA_SHOW_LIVE"
+echo $(date) "RA_SHOW_REPLAY=$RA_SHOW_REPLAY"
+echo $(date) "RA_SHOW_REPLAY_OLD=$RA_SHOW_REPLAY_OLD"
+echo $(date) "RA_SHOW_RDS=$RA_SHOW_RDS"
+echo $(date) "NEXT_SHOW_RDS=$NEXT_SHOW_RDS"
+echo $(date) "NEXT_SHOW_RDS_COMPRESSED=$NEXT_SHOW_RDS_COMPRESSED"
+echo $(date) "PREVIOUS_SHOW_RDS=$PREVIOUS_SHOW_RDS"
 
 #Warunek sprawdzający czy planowany czas audycji się już skończył i czy można generować raport
 if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID,,}" || "${RA_SHOW_ID_AS_PLANNED,,}" != "${RA_SHOW_ID_AS_PLANNED_OLD,,}" ]]; then
