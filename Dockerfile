@@ -31,6 +31,9 @@ RUN chmod +x /stats/generate-week-rank.sh
 ADD generate-year-rank.sh /stats/generate-year-rank.sh
 RUN chmod +x /stats/generate-year-rank.sh
 
+ADD a24h_io/a24h_setting.json /a24h_io/a24h_setting.json
+ADD a24h_io/a24h_program.json /a24h_io/a24h_program.json
+
 RUN crontab -l | { cat; echo "30 2 * * * /stats/generate-year-rank.sh"; } | crontab -
 RUN crontab -l | { cat; echo "20 2 * * * /stats/generate-week-rank.sh"; } | crontab -
 
