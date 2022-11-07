@@ -33,6 +33,7 @@ influx config create --config-name ra-stats \
   --token $INFLUX_TOKEN \
   --active
 
+START_SHOW_TIME_UTC=`date -d "-1 hour" +%Y-%m-%dT%TZ --utc`
 #Tu rozpoczyna się pętla odpowiedzialna za rejestrację danych o słuchalności
 while true
 do
@@ -41,142 +42,75 @@ DATE_IN_SECONDS=$(date +%s)
 RA_SHOW_OLD=$RA_SHOW_ID
 RA_LIVE_OLD=$RA_SHOW_LIVE
 RA_TAG_OLD=$RA_TAG
-RA_SHOW_REPLAY_OLD=$RA_SHOW_REPLAY
+RA_SHOW_LIVE_OLD=$RA_SHOW_LIVE
 RA_SHOW_ID_AS_PLANNED_OLD=$RA_SHOW_ID_AS_PLANNED
 
-if [[ -f ${A24H_SETTINGS_FILE} ]]; then
-  start_a24h_time=`date -d "$(cat ${A24H_SETTINGS_FILE} | jq .startTime | sed -e s/\"//g)"  +%s`
-  end_a24h_time=`date -d "$(cat ${A24H_SETTINGS_FILE} | jq .endTime | sed -e s/\"//g)" +%s`
-  if [[ $start_a24h_time < $DATE_IN_SECONDS && $end_a24h_time > $DATE_IN_SECONDS ]]; then
-    export A24H_MODE="true"
-    export A24H_TAG=`cat ${A24H_SETTINGS_FILE} | jq .tag | sed -e s/\"//g`
-  else
-    export A24H_MODE="false"
-  fi
-else 
-  export A24H_MODE="false"
-fi
-
 RA_STREAM_DATA=`curl -sS https://${RA_ADDRESS}:8443/status-json.xsl`
-if [[ "${A24H_MODE}" == "true" ]]; then
-  PROGRAM_API_DATA=`cat ${A24H_PROGRAM_FILE}`
-else
-  PROGRAM_API_DATA=`curl ${API_ADDRESS}`
-fi
+EMITER_API_DATA=`curl ${EMITER_API_ADDRESS}`
 
 #RAOGG_LISTENERS to zmienna w której zapisujemy aktualną liczbę słuchaczy streamu "raogg" z icecasta, RAMP3_LISTENERS to zmienna w której zapisujemy aktualną liczbę słuchaczy streamu "ramp3" z icecasta, a RA_LISTENERS to suma tych dwóch zmiennych
 RAOGG_LISTENERS=`echo $RA_STREAM_DATA | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg").listeners'`
 RAMP3_LISTENERS=`echo $RA_STREAM_DATA | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/ramp3").listeners'`
 RA_LISTENERS=$(expr $RAOGG_LISTENERS + $RAMP3_LISTENERS)
 
-NEXT_SHOW_RDS=`echo ${PROGRAM_API_DATA} | jq '. | .[] ' | jq -s "sort_by(.weekday,.begin_h,.begin_m) | .[] | select((.weekday*24*60+.begin_h*60+.begin_m >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) and .weekday*24*60+.begin_h*60+.begin_m+.duration > $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)))  or .weekday*24*60+.begin_h*60+.begin_m+.duration >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M) + 7 \* 60 \* 24)) | .program.rds " | sed 's/\"//g' | head -1`
-PREVIOUS_SHOW_RDS=`echo ${PROGRAM_API_DATA} | jq '. | .[] ' | jq -s "sort_by(.weekday,.begin_h,.begin_m) | .[] | select((.weekday*24*60+.begin_h*60+.begin_m <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M))) and .weekday*24*60+.begin_h*60+.begin_m+.duration <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) ) | .program.rds " | sed 's/\"//g' | tail -1`
+########################################################
+RA_CODE=`echo ${EMITER_API_DATA} | jq .code | sed 's/\"//g'`
+RA_SHOW_ID=`echo ${EMITER_API_DATA} | jq .program_code | sed 's/\"//g'`
+RA_TAG=`echo ${EMITER_API_DATA} | jq 'if .artist == "" or .artist == null then .title else .artist + " - "  + .title end' | sed 's/\"//g'`
+RA_SOURCE=`echo ${EMITER_API_DATA} | jq .source | sed 's/\"//g'`
+RA_FILENAME=`echo ${EMITER_API_DATA} | jq .filename | sed 's/\"//g'`
 
-#Poniższe zmienne to informacje o audycji pobrane z pliku ramowka.json, zmienne z "_PLANNED" są potrzebne do tego, żeby nie zostały nadpisane, gdy się okaże, że audycja się nie odbyła, albo potrwała krócej niż w planie. ID to kod audycji z docsa ramówkowego, REPLAY to flaga oznaczająca, czy audycja jest powtórką czy pierwszą emisją, a NAME to tytuł audycji z ramówki
-RA_SHOW_ID=`echo ${PROGRAM_API_DATA} | jq ". | .[] | select((.weekday*24*60+.begin_h*60+.begin_m <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) and .weekday*24*60+.begin_h*60+.begin_m+.duration > $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)))  or .weekday*24*60+.begin_h*60+.begin_m+.duration >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M) + 7 \* 60 \* 24)) | .program.slug " | sed 's/\"//g'`
-RA_SHOW_REPLAY=`echo ${PROGRAM_API_DATA} | jq ". | .[] | select((.weekday*24*60+.begin_h*60+.begin_m <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) and .weekday*24*60+.begin_h*60+.begin_m+.duration > $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)))  or .weekday*24*60+.begin_h*60+.begin_m+.duration >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M) + 7 \* 60  \* 24)) | .replay " | sed 's/\"//g'`
-RA_SHOW_RDS=`echo ${PROGRAM_API_DATA} | jq ". | .[] | select((.weekday*24*60+.begin_h*60+.begin_m <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) and .weekday*24*60+.begin_h*60+.begin_m+.duration > $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)))  or .weekday*24*60+.begin_h*60+.begin_m+.duration >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M) + 7 \* 60 \* 24)) | .program.rds " | sed 's/\"//g'`
-
-#Ta zmienna jest potrzebna, żeby zachować informację o tym jaka audycja powinna być teraz emitowana... RA_SHOW_ID potem może się zmienić, żeby poprawnie zaindeksować metrykę dla danej audycji w zależności od aktualnie emitowanego taga
-RA_SHOW_ID_AS_PLANNED=$RA_SHOW_ID
-
-#RA_TAG to pobrany z icecasta tag z audycji. Generalnie to jest to co wpisujemy w RDSa :) Niektórzy tagując puszki używają także taga "artist" razem z tagiem "title" i taki przypadek też jest przewidziany
-RA_TAG=`echo $RA_STREAM_DATA | jq '.icestats.source | .[] | select(.listenurl=="http://'${RA_ADDRESS}':8000/raogg") | if .artist == "" or .artist == null then .title else .artist + " - "  + .title end' | sed 's/\"//g'`
-#RA_TAG_COMPRESSED i #RA_SHOW_NAME_COMPRESSED to skrócone formy zmiennych RA_TAG i RA_SHOW_NAME. Porównywane są takie formy, gdyż RDS nie zawsze jest wypełniany z taką samą precyzją. Skrócenie tych zmiennych polega na tym, że zamieniamy wszystkie znaki na małe litery, kasujemy znaki jakie jak: spacja, przecinek, apostrof, #, | i myślnik
-RA_TAG_COMPRESSED=`echo ${RA_TAG,,} | sed -e 's/[ |,|'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g'`
-RA_SHOW_RDS_COMPRESSED=`echo ${RA_SHOW_RDS,,} | sed -e 's/[ |,|'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g' | cut -b -5`
-NEXT_SHOW_RDS_COMPRESSED=`echo ${NEXT_SHOW_RDS,,} | sed -e 's/[ |,|'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g' | cut -b -5`
-PREVIOUS_SHOW_RDS_COMPRESSED=`echo ${PREVIOUS_SHOW_RDS,,} | sed -e 's/[ |,|'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g' | cut -b -5`
-
-#To samo się stanie, jeśli wpis w RDSie nie będzie się zgadzał z tytułem audycji
-if [[ "$RA_TAG_COMPRESSED" != *"$RA_SHOW_RDS_COMPRESSED"* ]]; then
-  RA_SHOW_ID="playlista"
-  RA_SHOW_REPLAY="true"
-  if [[ "$RA_TAG_COMPRESSED" == *"$NEXT_SHOW_RDS_COMPRESSED"* ]]; then
-    RA_SHOW_ID=`echo ${PROGRAM_API_DATA} | jq '. | .[] ' | jq -s "sort_by(.weekday,.begin_h,.begin_m) | .[] | select((.weekday*24*60+.begin_h*60+.begin_m >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) and .weekday*24*60+.begin_h*60+.begin_m+.duration > $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)))  or .weekday*24*60+.begin_h*60+.begin_m+.duration >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M) + 7 \* 60 \* 24)) | .program.slug " | sed 's/\"//g' | head -1`
-    RA_SHOW_REPLAY=`echo ${PROGRAM_API_DATA} | jq '. | .[] ' | jq -s "sort_by(.weekday,.begin_h,.begin_m) | .[] | select((.weekday*24*60+.begin_h*60+.begin_m >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) and .weekday*24*60+.begin_h*60+.begin_m+.duration > $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)))  or .weekday*24*60+.begin_h*60+.begin_m+.duration >= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M) + 7 \* 60 \* 24)) | .replay " | sed 's/\"//g' | head -1`
-  fi
-  if [[ "$RA_TAG_COMPRESSED" == *"$PREVIOUS_SHOW_RDS_COMPRESSED"* ]]; then
-    RA_SHOW_ID=`echo ${PROGRAM_API_DATA} | jq '. | .[] ' | jq -s "sort_by(.weekday,.begin_h,.begin_m) | .[] | select((.weekday*24*60+.begin_h*60+.begin_m <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M))) and .weekday*24*60+.begin_h*60+.begin_m+.duration <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) ) | .program.slug " | sed 's/\"//g' | tail -1`
-    RA_SHOW_REPLAY=`echo ${PROGRAM_API_DATA} | jq '. | .[] ' | jq -s "sort_by(.weekday,.begin_h,.begin_m) | .[] | select((.weekday*24*60+.begin_h*60+.begin_m <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M))) and .weekday*24*60+.begin_h*60+.begin_m+.duration <= $(expr $(date +%u) \* 24 \* 60 + $(date +%H) \* 60 + $(date +%M)) ) | .replay " | sed 's/\"//g' | tail -1`
-  fi
-fi
-
-#Przed dostosowaniem się do API ramówkowego RA używałem, zmiennej RA_SHOW_LIVE, która przyjmowała true jak audycja była na żywo, albo była puszką w nowym wydaniu w ramówce i false jak była powtórką. By nie zmieniać całej logiki skryptu postanowiłem zrobić prostą negację zmiennej RA_SHOW_REPLAY z API ramówkowego RA
-if [[ "$RA_SHOW_REPLAY" == "false" ]]; then
-  RA_SHOW_LIVE="true"
-  if [[ "${A24H_MODE}" == "true" && -n ${A24H_TAG} ]]; then
-    RA_SHOW_LIVE=${A24H_TAG}
-  fi
+if [[ "$RA_SOURCE" == "studio" ]]; then
+    RA_SHOW_LIVE="true"
 else
-  RA_SHOW_LIVE="false"
+    if [[ "$RA_SOURCE" == "playout" ]]; then
+        if [[ "$RA_FILENAME" == *"puszka"* && -z $RA_SHOW_ID  ]]; then
+            tab=$(echo $RA_FILENAME | tr '(/|_|.)' '\n')
+            RA_SHOW_ID=`echo "${tab}" | head -5 | tail -1`
+            RA_SHOW_LIVE="rec"
+        fi
+        if [[ "$RA_FILENAME" == *"powtorka"* && -z $RA_SHOW_ID  ]]; then
+            tab=$(echo $RA_FILENAME | tr '(/|_|.)' '\n')
+            RA_SHOW_ID=`echo "${tab}" | head -5 | tail -1`
+            RA_SHOW_LIVE="false"
+        fi
+    else 
+        RA_SHOW_ID="playlista"
+        RA_SHOW_LIVE="false"
+    fi
 fi
 
-#Jeśli o danej porze nie jest zaplanowana żadna audycja, to wynik słuchalności zostanie przypisany playliście.
-if [ -z "$RA_SHOW_ID" ]; then
-  RA_SHOW_ID="playlista"
-  RA_SHOW_LIVE="false"
-  RA_SHOW_REPLAY="true"
+if [[ "$RA_SHOW_ID" == "custom" ]]; then
+    RA_SHOW_LIVE="custom"
+    RA_SHOW_ID=`echo ${RA_TAG,,} | sed -e 's/[ |,|'"'"'|\#|\||\-]//g' | sed 's/ą/a/g' | sed 's/ę/e/g' | sed 's/ł/l/g' | sed 's/ń/n/g' | sed 's/ó/o/g' | sed 's/ś/s/g' | sed 's/[ż|ź]/z/g' | cut -b -5`
 fi
-
-if [ -z "$RA_SHOW_ID_AS_PLANNED" ]; then
-  RA_SHOW_ID_AS_PLANNED="playlista"
-fi
+########################################################
 
 echo $(date) "RA_TAG=$RA_TAG"
-echo $(date) "A24H_MODE=$A24H_MODE"
-echo $(date) "A24H_TAG=$A24H_TAG"
-echo $(date) "RA_TAG_COMPRESSED=$RA_TAG_COMPRESSED"
 echo $(date) "RA_SHOW_ID=$RA_SHOW_ID"
-echo $(date) "RA_SHOW_OLD=$RA_SHOW_OLD"
-echo $(date) "RA_SHOW_ID_AS_PLANNED=$RA_SHOW_ID_AS_PLANNED"
-echo $(date) "RA_SHOW_ID_AS_PLANNED_OLD=$RA_SHOW_ID_AS_PLANNED_OLD"
 echo $(date) "RA_SHOW_LIVE=$RA_SHOW_LIVE"
-echo $(date) "RA_SHOW_REPLAY=$RA_SHOW_REPLAY"
-echo $(date) "RA_SHOW_REPLAY_OLD=$RA_SHOW_REPLAY_OLD"
-echo $(date) "RA_SHOW_RDS=$RA_SHOW_RDS"
-echo $(date) "NEXT_SHOW_RDS=$NEXT_SHOW_RDS"
-echo $(date) "NEXT_SHOW_RDS_COMPRESSED=$NEXT_SHOW_RDS_COMPRESSED"
-echo $(date) "PREVIOUS_SHOW_RDS=$PREVIOUS_SHOW_RDS"
+echo $(date) "START_SHOW_TIME_UTC=$START_SHOW_TIME_UTC"
+echo $(date) "END_SHOW_TIME_UTC=$END_SHOW_TIME_UTC"
 
 #Warunek sprawdzający czy planowany czas audycji się już skończył i czy można generować raport
-if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID,,}" || "${RA_SHOW_ID_AS_PLANNED,,}" != "${RA_SHOW_ID_AS_PLANNED_OLD,,}" ]]; then
-  if [[ "${RA_SHOW_OLD,,}" != "playlista" && "${RA_SHOW_ID_AS_PLANNED_OLD,,}" != "playlista" ]]; then
-    NOW_WEEKDAY=`date +%u`
-    #SHOW_WEEKDAY=`cat /stats/ramowka.json | jq ".ramowka | .[] | select(.id==\"$RA_SHOW_OLD\") | select(.live==${RA_LIVE_OLD}) | .weekDay"`
-    SHOW_WEEKDAY=`echo ${PROGRAM_API_DATA} | jq ". | .[] | select(.program.slug==\"$RA_SHOW_OLD\") | select(.replay==${RA_SHOW_REPLAY_OLD}) | .weekday"`
-    #Jeśli audycja kończy się o godzinie 0:00 to trzeba dostosować datę
-    if [ "$NOW_WEEKDAY" != "$SHOW_WEEKDAY" ]; then
-      case $SHOW_WEEKDAY in
-        0 )
-          RA_SHOW_DATE=`date -d "Last Sunday" +%Y-%m-%d`
-          ;;
-        1 )
-          RA_SHOW_DATE=`date -d "Last Monday" +%Y-%m-%d`
-          ;;
-        2 )
-          RA_SHOW_DATE=`date -d "Last Tuesday" +%Y-%m-%d`
-          ;;
-        3 )
-          RA_SHOW_DATE=`date -d "Last Wednesday" +%Y-%m-%d`
-          ;;
-        4 )
-          RA_SHOW_DATE=`date -d "Last Thursday" +%Y-%m-%d`
-          ;;
-        5 )
-          RA_SHOW_DATE=`date -d "Last Friday" +%Y-%m-%d`
-          ;;
-        6 )
-          RA_SHOW_DATE=`date -d "Last Saturday" +%Y-%m-%d`
-          ;;
-      esac
-    else
-      RA_SHOW_DATE=`date +%Y-%m-%d`
-    fi
+if [[ "${RA_SHOW_OLD,,}" != "${RA_SHOW_ID,,}"  && -n "${RA_SHOW_OLD,,}" ]]; then
+  if [[ "${RA_SHOW_OLD,,}" != "playlista" && "${RA_SHOW_OLD,,}" != "unknown" ]]; then
+    END_SHOW_TIME_UTC=`date +%Y-%m-%dT%TZ --utc`
     #Tutaj uruchamiamy skrypt generujący raport
-    echo "Tworzenie raportu słuchalności dla audycji $RA_SHOW_OLD dnia $RA_SHOW_DATE"
-    /stats/report-generation.sh --show-code $RA_SHOW_OLD --show-date $RA_SHOW_DATE --show-live $RA_LIVE_OLD &
+    RA_SHOW_DATE=`date -d "$START_SHOW_TIME_UTC" +%Y-%m-%d`
+    echo "Tworzenie raportu słuchalności dla audycji $RA_SHOW_OLD z dnia $RA_SHOW_DATE"
+    if [[ "${RA_LIVE_OLD}" == "custom" ]]; then
+      echo "/stats/report-generation.sh --show-code $RA_SHOW_OLD --show-start $START_SHOW_TIME_UTC --show-end $END_SHOW_TIME_UTC --show-live $RA_LIVE_OLD --show-title "${RA_TAG_OLD}" &"
+      /stats/report-generation.sh --show-code $RA_SHOW_OLD --show-start $START_SHOW_TIME_UTC --show-end $END_SHOW_TIME_UTC --show-live $RA_LIVE_OLD --show-title "${RA_TAG_OLD}" &
+      if [[ "${RA_SHOW_LIVE}" != "custom" ]]; then
+        /stats/generate-custom-rank.sh
+      fi
+    else
+      echo "/stats/report-generation.sh --show-code $RA_SHOW_OLD --show-start $START_SHOW_TIME_UTC --show-end $END_SHOW_TIME_UTC --show-live $RA_LIVE_OLD --show-title \"\""
+      /stats/report-generation.sh --show-code $RA_SHOW_OLD --show-start $START_SHOW_TIME_UTC --show-end $END_SHOW_TIME_UTC --show-live $RA_LIVE_OLD --show-title ""
+    fi
   fi
+  START_SHOW_TIME_UTC=`date +%Y-%m-%dT%TZ --utc`
 fi
 
 #Aby wysłać odpowiednio oznaczoną metrykę słuchalności musimy wygenerować timestamp w formacie epoch liczonym w sekundach
@@ -191,6 +125,6 @@ influx write \
     'listeners,show='${RA_SHOW_ID}',live='${RA_SHOW_LIVE}' listeners='${RA_LISTENERS}' '$DATE_IN_SECONDS
 
 #Tu można regulować jak często wysyłamy metrykę - ustawiłem co 10 sekund, ale nie może być rzadziej niż co minutę
-sleep 10
+sleep $GRANULATION
 
 done

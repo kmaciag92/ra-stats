@@ -1,8 +1,9 @@
-#!/bin/bash
+#!/bin/bash -l
 
-PROGRAM_API_DATA=`curl ${API_ADDRESS}`
+PROGRAM_API_DATA=`curl ${PROGRAM_API_ADDRESS}`
 REPORT_TIME=`date '+%Y-%m-%d %T'`
 GENERATED_FILE_NAME="roczny_ranking"
+INFLUX_ORGANIZATION="RadioAktywne"
 
 RANKING=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
@@ -16,7 +17,8 @@ RANKING=`curl -sS --request POST  \
     )
   |> filter(fn: (r) =>
       r.live == "true" or
-      r.live == "false"
+      r.live == "false" or
+      r.live == "rec"
   )
   |> group(columns: ["_show"])
   |> sort(desc: true)

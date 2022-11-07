@@ -2,7 +2,8 @@
 
 PROGRAM_API_DATA=`curl ${PROGRAM_API_ADDRESS}`
 REPORT_TIME=`date '+%Y-%m-%d %T'`
-GENERATED_FILE_NAME="tygodniowy_ranking"
+REPORT_DATE=`date '+%Y-%m-%d'`
+GENERATED_FILE_NAME="custom_ranking"
 INFLUX_ORGANIZATION="RadioAktywne"
 
 RANKING=`curl -sS --request POST  \
@@ -11,14 +12,12 @@ RANKING=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket: "ra-stats-per-show")
-  |> range(start: -duration(v: 7d))
+  |> range(start: -duration(v: 30d))
   |> filter(fn: (r) =>
     r._field == "mean"
     )
   |> filter(fn: (r) =>
-      r.live == "true" or
-      r.live == "false" or
-      r.live == "rec"
+      r.live == "custom"
   )
   |> group(columns: ["_show"])
   |> sort(desc: true)
@@ -89,8 +88,8 @@ wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $GENERATED_FILE_NAME.h
 rm $GENERATED_FILE_NAME.html
 
 if [[ -d "${RANKS_DIR}" ]]; then
-  mv $GENERATED_FILE_NAME.pdf ${RANKS_DIR}/$GENERATED_FILE_NAME.pdf
+  mv $GENERATED_FILE_NAME.pdf ${RANKS_DIR}/$GENERATED_FILE_NAME-$REPORT_DATE.pdf
 else
   mkdir -p ${RANKS_DIR}
-  mv $GENERATED_FILE_NAME.pdf ${RANKS_DIR}/$GENERATED_FILE_NAME.pdf
+  mv $GENERATED_FILE_NAME.pdf ${RANKS_DIR}/$GENERATED_FILE_NAME-$REPORT_DATE.pdf
 fi
