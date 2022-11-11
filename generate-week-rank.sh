@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-PROGRAM_API_DATA=`curl ${PROGRAM_API_ADDRESS}`
+PROGRAM_API_DATA=`curl -sS ${PROGRAM_API_ADDRESS}`
 REPORT_TIME=`date '+%Y-%m-%d %T'`
 GENERATED_FILE_NAME="tygodniowy_ranking"
 INFLUX_ORGANIZATION="RadioAktywne"
@@ -60,12 +60,24 @@ td, th {
     <th>LP</th>
     <th>Wynik</th>
     <th>Nazwa Audycji</th>
+    <th></th>
     <th>Data</th>
   </tr>' > $GENERATED_FILE_NAME.html
 
 while IFS= read -r line
 do
   SHOW_CODE=`echo "$line" | awk '{ print $5 }'`
+  SHOW_TYPE=`echo "$line" | awk '{ print $4 }'`
+  case $SHOW_TYPE in
+    "true")
+      SHOW_TYPE_TEXT="live";;
+    "false")
+      SHOW_TYPE_TEXT="powtórka";;
+    "rec")
+      SHOW_TYPE_TEXT="puszka";;
+    *)
+      SHOW_TYPE_TEXT="błąd";;
+  esac
   SHOW_NAME=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") |  .program.rds ' | sed 's/\"//g' | head -1`
   line=`echo $line | sed "s/ /=/g"`
   if [[ -z "$SHOW_NAME" ]]; then
@@ -73,13 +85,14 @@ do
     continue
   fi
   line=`echo $line | sed "s/$SHOW_CODE/$SHOW_NAME/g"`
+  line=`echo $line | sed "s/$SHOW_TYPE/$SHOW_TYPE_TEXT/g"`
   echo "$line" >> ranking.txt
 done <<< $(echo "$RANKING")
 
 cat ranking.txt | awk 'BEGIN { FS="="; print "<tr>" }
      { print "<td>" } 
      { print NR } 
-     { print "</td><td>" $3 "</td><td>" $5 "</td><td>" $1 "</td></tr>" }
+     { print "</td><td>" $3 "</td><td>" $5 "</td><td>" $4 "</td><td>" $1 "</td></tr>" }
      END { print "</table></body>" }' >> $GENERATED_FILE_NAME.html
 
 rm ranking.txt
