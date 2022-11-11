@@ -70,7 +70,18 @@ docker run -d -p 8086:8086 --name ra-stats --dns 8.8.8.8 \
 
 i na ich podstawie sprawdź czy logi są przesyłane do bazy danych, logi powinny wyglądać następująco:
 ```
-<tu wstaw logi>
+Sat Nov 12 00:44:40 CET 2022 RA_TAG=Radiohead - Daydreaming
+Sat Nov 12 00:44:40 CET 2022 RA_SHOW_ID=playlista
+Sat Nov 12 00:44:40 CET 2022 RA_SHOW_LIVE=false
+Sat Nov 12 00:44:40 CET 2022 START_SHOW_TIME_UTC=2022-11-11T22:34:01Z
+Sat Nov 12 00:44:40 CET 2022 END_SHOW_TIME_UTC=
+listeners,show=playlista,live=false listeners=2 Sat Nov 12 00:44:40 CET 2022
+Sat Nov 12 00:44:50 CET 2022 RA_TAG=Radiohead - Daydreaming
+Sat Nov 12 00:44:50 CET 2022 RA_SHOW_ID=playlista
+Sat Nov 12 00:44:50 CET 2022 RA_SHOW_LIVE=false
+Sat Nov 12 00:44:50 CET 2022 START_SHOW_TIME_UTC=2022-11-11T22:34:01Z
+Sat Nov 12 00:44:50 CET 2022 END_SHOW_TIME_UTC=
+listeners,show=playlista,live=false listeners=2 Sat Nov 12 00:44:50 CET 2022
 ```
 
 a także wejdź na adres `localhost:8086` zaloguj się loginem `ra-stats` i odpowiednim hasłem i sprawdź na dashboardzie `Słuchalność` czy aktualne dane są przesyłane do bazy danych.
