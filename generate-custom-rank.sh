@@ -52,7 +52,7 @@ td, th {
 </head>
 
 <body>
-<center><h1>tygodniowy ranking słuchalności</h1></center>
+<center><h1>Customowy ranking słuchalności</h1></center>
 <center><h6>wygenerowano: '$REPORT_TIME'</h6></center>
 <table class="center">
   <tr>
