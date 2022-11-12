@@ -27,25 +27,25 @@ RUN chmod +x /stats/manual-report-generation.sh
 
 ADD generate-week-rank.sh /stats/generate-week-rank.sh
 RUN chmod +x /stats/generate-week-rank.sh
+RUN chmod 0744 /stats/generate-week-rank.sh
 
 ADD generate-year-rank.sh /stats/generate-year-rank.sh
 RUN chmod +x /stats/generate-year-rank.sh
+RUN chmod 0744 /stats/generate-year-rank.sh
 
-ADD a24h_io/a24h_setting.json /a24h_io/a24h_setting.json
-ADD a24h_io/a24h_program.json /a24h_io/a24h_program.json
-
-RUN crontab -l | { cat; echo "30 2 * * * /stats/generate-year-rank.sh"; } | crontab -
-RUN crontab -l | { cat; echo "20 2 * * * /stats/generate-week-rank.sh"; } | crontab -
+ADD generate-custom-rank.sh /stats/generate-custom-rank.sh
+RUN chmod +x /stats/generate-custom-rank.sh
+RUN chmod 0744 /stats/generate-custom-rank.sh
 
 ENV RASSWORD #FILL
 ENV INFLUX_TOKEN #FILL
 ENV RA_ADDRESS listen.radioaktywne.pl
+ENV GRANULATION 10
 ENV TZ Europe/Warsaw
-ENV API_ADDRESS https://cloud.radioaktywne.pl/api/timeslots
+ENV PROGRAM_API_ADDRESS https://cloud.radioaktywne.pl/api/timeslots
+ENV EMITER_API_ADDRESS https://cloud.radioaktywne.pl/emiter/status
 ENV RANKS_DIR /rankingi
-ENV A24H_DIR /a24h_io
-ENV A24H_SETTINGS_FILE ${A24H_DIR}/a24h_setting.json
-ENV A24H_PROGRAM_FILE ${A24H_DIR}/a24h_program.json
+ENV CUSTOM_DIR /custom_reports
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 ENTRYPOINT ["/usr/bin/supervisord"]

@@ -1,8 +1,9 @@
-#!/bin/bash
+#!/bin/bash -l
 
-PROGRAM_API_DATA=`curl ${API_ADDRESS}`
+PROGRAM_API_DATA=`curl -sS ${PROGRAM_API_ADDRESS}`
 REPORT_TIME=`date '+%Y-%m-%d %T'`
 GENERATED_FILE_NAME="roczny_ranking"
+INFLUX_ORGANIZATION="RadioAktywne"
 
 RANKING=`curl -sS --request POST  \
   http://localhost:8086/api/v2/query?org=$INFLUX_ORGANIZATION \
@@ -16,7 +17,8 @@ RANKING=`curl -sS --request POST  \
     )
   |> filter(fn: (r) =>
       r.live == "true" or
-      r.live == "false"
+      r.live == "false" or
+      r.live == "rec"
   )
   |> group(columns: ["_show"])
   |> sort(desc: true)
@@ -58,26 +60,37 @@ td, th {
     <th>LP</th>
     <th>Wynik</th>
     <th>Nazwa Audycji</th>
+    <th></th>
     <th>Data</th>
   </tr>' > $GENERATED_FILE_NAME.html
 
 while IFS= read -r line
 do
   SHOW_CODE=`echo "$line" | awk '{ print $5 }'`
+  SHOW_TYPE=`echo "$line" | awk '{ print $4 }'`
+  case $SHOW_TYPE in
+    "true")
+      SHOW_TYPE_TEXT="live";;
+    "false")
+      SHOW_TYPE_TEXT="powtórka";;
+    "rec")
+      SHOW_TYPE_TEXT="puszka";;
+    *)
+      SHOW_TYPE_TEXT="błąd";;
+  esac
   SHOW_NAME=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") |  .program.rds ' | sed 's/\"//g' | head -1`
   line=`echo $line | sed "s/ /=/g"`
-  if [[ -z "$SHOW_NAME" ]]; then
-    echo "$line" >> ranking.txt
-    continue
+  if [[ ! -z "$SHOW_NAME" ]]; then
+    line=`echo $line | sed "s/$SHOW_CODE/$SHOW_NAME/g"`
   fi
-  line=`echo $line | sed "s/$SHOW_CODE/$SHOW_NAME/g"`
+  line=`echo $line | sed "s/$SHOW_TYPE/$SHOW_TYPE_TEXT/g"`
   echo "$line" >> ranking.txt
 done <<< $(echo "$RANKING")
 
 cat ranking.txt | awk 'BEGIN { FS="="; print "<tr>" }
      { print "<td>" } 
      { print NR } 
-     { print "</td><td>" $3 "</td><td>" $5 "</td><td>" $1 "</td></tr>" }
+     { print "</td><td>" $3 "</td><td>" $5 "</td><td>" $4 "</td><td>" $1 "</td></tr>" }
      END { print "</table></body>" }' >> $GENERATED_FILE_NAME.html
 
 rm ranking.txt

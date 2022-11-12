@@ -3,7 +3,7 @@
 #Instrukcja, która wyświetla się, gdy źle uruchomimy skrypt
 usage()
 {
-  echo "musisz podać parametry audycji --show-code --show-date --show-live"   
+  echo "musisz podać parametry audycji --show-code --show-start --show-end --show-live"   
 }
 
 #Pętla odpowiedzialna za odpowiednie ustawienie zmiennych odczytując parametry wejściowe
@@ -12,11 +12,17 @@ while [ "$1" != "" ]; do
     -c | --show-code )        shift
                               export SHOW_CODE=$1
                               ;;
-    -d | --show-date )        shift
-                              export SHOW_DATE=$1
+    -s | --show-start )       shift
+                              export SHOW_START=$1
+                              ;;
+    -e | --show-end )         shift
+                              export SHOW_END=$1
                               ;;
     -l | --show-live )        shift
                               export SHOW_LIVE=$1
+                              ;;
+    -t | --show-title )       shift
+                              export SHOW_TITLE=$1
                               ;;
     * )                       usage
                               exit 1
@@ -24,23 +30,12 @@ while [ "$1" != "" ]; do
   shift
 done
 
-if [[ -f ${A24H_SETTINGS_FILE} ]]; then
-  A24H_TAG=`cat ${A24H_SETTINGS_FILE} | jq .tag | sed -e s/\"//g`
-  if [[ "$A24H_TAG"="$SHOW_LIVE" ]]; then
-    A24H_MODE="true"
-  fi
-fi
-
 #Tutaj ustawiamy stałe potrzebne w dalszej części skryptu
 INFLUX_ORGANIZATION="RadioAktywne"
 BUCKET_NAME="ra-stats"
 BUCKET_NAME_FOR_RETENTION="ra-stats-per-show"
+PROGRAM_API_DATA=`curl ${PROGRAM_API_ADDRESS}`
 
-if [[ "${A24H_MODE}"=="true" ]]; then
-  PROGRAM_API_DATA=`cat ${A24H_PROGRAM_FILE}`
-else
-  PROGRAM_API_DATA=`curl ${API_ADDRESS}`
-fi
 
 #Wprowadzamy zmienną SHOW_REPLAY, która jest negacją SHOW_LIVE, SHOW_LIVE jest używany w bazie do przypisywania "true" premierowym wydaniom audycji, za to SHOW_REPLAY w jsonie ramówkowym przyjmuje "true" gdy audycja jest powtórką
 if [[ "$SHOW_LIVE" == "false" ]]; then
@@ -49,17 +44,29 @@ else
   SHOW_REPLAY="false"
 fi
 
-#Tu pobieramy z jsona ramówkowego dane o audycji potrzebne do wygenerowania raportu
-SHOW_TITLE=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .program.name ' | sed 's/\"//g'`
-START_HOUR=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_h ' | sed 's/\"//g'`
-START_MINUTES=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_m ' | sed 's/\"//g'`
-SHOW_DURATION=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .duration' | sed 's/\"//g'`
-TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
-TIME_ZONE=`echo $(date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00" +%Z)`
+START_TIME_IN_SECONDS=`date -d "$SHOW_START" +%s`
+END_TIME_IN_SECONDS=`date -d "$SHOW_END" +%s`
+DURATION_IN_SECONDS=`expr $END_TIME_IN_SECONDS - $START_TIME_IN_SECONDS`
 
-#Tutaj tworzymy timestamp dla startu i zakończenia audycji, który wpiszemy do zapytań w influksie. Trzeba odjąć TIME_SHIFT wyliczony na podstawie aktualnej strefy czasowej, gdyż influx nie ogarnia stref czasowych w zapytaniach. Trzeba także przekonwertować je do odpowiedniego formatu. Z tych timestampów trzeba także wziąć tylko datę startu i datę zakończenia audycji, ponieważ przewidujemy sytuację, że audycja mogła się zacząć wcześniej, bądź przedłużyć...
-START_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours" +%Y-%m-%d`
-END_DATE_TO_QUERY=`date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours + $SHOW_DURATION minutes" +%Y-%m-%d`
+if [[ $DURATION_IN_SECONDS -lt 600 ]]; then
+  echo "Audycja $SHOW_CODE trwała krócej niż 10 minut - nie generuję raportu"
+  exit 0
+fi
+
+#Tu pobieramy z jsona ramówkowego dane o audycji potrzebne do wygenerowania raportu
+if [[ "$SHOW_LIVE" != "custom" ]]; then
+  SHOW_TITLE=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .program.name ' | head -1 | sed 's/\"//g'`
+fi
+START_HOUR=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_h ' | head -1 | sed 's/\"//g'`
+START_MINUTES=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .begin_m ' | head -1 | sed 's/\"//g'`
+
+SHOW_DURATION=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") | select(.replay=='${SHOW_REPLAY}') | .duration' | head -1 | sed 's/\"//g'`
+
+TIME_SHIFT=`echo $(date +%:::z | sed "s/\+0//g")`
+TIME_ZONE=`echo $(date -d "$SHOW_START" +%Z)`
+
+SHOW_START_TO_QUERY=`date -d "$SHOW_START - $SHOW_DURATION minutes" +%Y-%m-%dT%TZ --utc`
+SHOW_END_TO_QUERY=`date -d "$SHOW_END + $SHOW_DURATION minutes" +%Y-%m-%dT%TZ --utc`
 
 #W poniższych zmiennych MIN, MEAN i MAX wyliczamy opisane w nazwach statystyki słuchalności. 
 #Stosujemy okno 24-godzinne, po to, żeby nie wygenerować dwóch wyników, z dwóch różnych okien, dlatego jest takie szerokie. 
@@ -72,7 +79,7 @@ MIN=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
+        |> range(start: '${SHOW_START_TO_QUERY}', stop: '${SHOW_END_TO_QUERY}')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 48h, fn: min)
@@ -86,7 +93,7 @@ MEAN=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
+        |> range(start: '${SHOW_START_TO_QUERY}', stop: '${SHOW_END_TO_QUERY}')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 48h, fn: mean)
@@ -104,7 +111,7 @@ MAX=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
+        |> range(start: '${SHOW_START_TO_QUERY}', stop: '${SHOW_END_TO_QUERY}')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 48h, fn: max)
@@ -121,7 +128,7 @@ TABLE_TO_REPORT=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
+        |> range(start: '${SHOW_START_TO_QUERY}', stop: '${SHOW_END_TO_QUERY}')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 1m, fn: max)
@@ -137,7 +144,7 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
   --header 'Accept: application/csv' \
   --header 'Content-type: application/vnd.flux' \
   --data 'from(bucket:"'${BUCKET_NAME}'")
-        |> range(start: '${START_DATE_TO_QUERY}T00:00:00Z', stop: '${END_DATE_TO_QUERY}T23:59:59Z')
+        |> range(start: '${SHOW_START_TO_QUERY}', stop: '${SHOW_END_TO_QUERY}')
         |> filter(fn: (r) => r.show == "'$SHOW_CODE'", onEmpty: "drop")
         |> filter(fn: (r) => r.live == "'$SHOW_LIVE'", onEmpty: "drop")
         |> aggregateWindow(every: 10s, fn: max)
@@ -150,6 +157,8 @@ TABLE_TO_GRAPH=`curl -sS --request POST  \
 START_TIME_TO_GRAPH=`echo "$TABLE_TO_GRAPH" | head -1 | cut -d ' ' -f 1`
 END_TIME_TO_GRAPH=`echo "$TABLE_TO_GRAPH" | tail -1 | cut -d ' ' -f 1`
 
+SHOW_DATE=`date -d "$SHOW_START" +%Y-%m-%d`
+
 # Jeśli tabela wyników jest pusta, bo wszystkie metryki zostały zapisane jako "playlista", to raport się nie wygeneruje
 if [ -z "$TABLE_TO_GRAPH" ]; then
   echo "$SHOW_DATE - Audycja $SHOW_CODE się nie odbyła - nie generuję raportu"
@@ -160,10 +169,13 @@ fi
 if [ "$SHOW_LIVE" == "false" ]; then
   POWTORKI="powtórki "
 else
-  if [ "$SHOW_LIVE" == "${A24H_TAG}" ]; then
+  POWTORKI=""
+  if [ "$SHOW_LIVE" == "custom" ]; then
     POWTORKI="audycji podczas specjalnej ramówki "
   fi
-  POWTORKI=""
+  if [ "$SHOW_LIVE" == "rec" ]; then
+    POWTORKI="puszki "
+  fi
 fi
 
 #Tu zaczynamy tworzenie pliku html, na podstawie, którego stworzony zostanie ostateczny raport w PDFie.
@@ -249,12 +261,12 @@ pushd /stats-results/
 wkhtmltopdf --encoding 'utf-8' --enable-local-file-access $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.pdf
 rm $SHOW_DATE-$SHOW_CODE.html $SHOW_DATE-$SHOW_CODE.jpg
 #Kod przenoszący wygenerowany raport do katalogu w NextCloudzie
-if [[ "${A24H_MODE}" == "true" ]]; then
-  if [[ -d "${A24H_DIR}/raporty" ]]; then
-    mv $SHOW_DATE-$SHOW_CODE.pdf ${A24H_DIR}/raporty/$SHOW_DATE-$SHOW_CODE.pdf
+if [[ "${SHOW_LIVE}" == "custom" ]]; then
+  if [[ -d "${CUSTOM_DIR}/raporty" ]]; then
+    mv $SHOW_DATE-$SHOW_CODE.pdf ${CUSTOM_DIR}/raporty/$SHOW_DATE-$SHOW_CODE.pdf
   else
-    mkdir -p ${A24H_DIR}/raporty
-    mv $SHOW_DATE-$SHOW_CODE.pdf ${A24H_DIR}/raporty/$SHOW_DATE-$SHOW_CODE.pdf
+    mkdir -p ${CUSTOM_DIR}/raporty
+    mv $SHOW_DATE-$SHOW_CODE.pdf ${CUSTOM_DIR}/raporty/$SHOW_DATE-$SHOW_CODE.pdf
   fi
 else
   if [[ -d "/nextcloud/$SHOW_CODE/sluchalnosc" ]]; then
@@ -268,13 +280,17 @@ popd
 
 # jak już mamy MIN, MEAN i MAX to wrzucimy je do bucketu agregującego dane o słuchalnościach poszczególnych wydań audycji
 #Najpierw generujemy odpowiedni timestamp umieszczamy w zapytaniu do influxa, a potem wysyłamy zapytanie z zebranymi danymi
-DATE_IN_NANOS=$(date -d "$SHOW_DATE $START_HOUR:$START_MINUTES:00 $TIME_ZONE - $TIME_SHIFT hours + $SHOW_DURATION minutes" +%s)
+DATE_IN_SECONDS=$(date -d "$SHOW_END" +%s)
 
 influx write \
     -b $BUCKET_NAME_FOR_RETENTION \
     -o $INFLUX_ORGANIZATION \
     -p s \
-    'max,show='${SHOW_CODE}',live='${SHOW_LIVE}' min='${MIN}',mean='${MEAN}',max='${MAX}' '${DATE_IN_NANOS}
+    'max,show='${SHOW_CODE}',live='${SHOW_LIVE}' min='${MIN}',mean='${MEAN}',max='${MAX}' '${DATE_IN_SECONDS}
 
 #Na koniec usuwamy plik, który posłużył do zrobienia wykresu
 rm -f mydata.txt
+
+# I aktualizujemy pliki z rankingami
+/stats/generate-week-rank.sh
+/stats/generate-year-rank.sh
