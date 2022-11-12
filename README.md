@@ -23,18 +23,19 @@ b.	https://github.com/RadioAktywne/ra-stats
 2.	Zainstaluj i uruchom aplikację docker, tak aby można było za jej pośrednictwem zbudować i uruchomić kontener
 3.	Sprawdź czy w katalogu `influxdb-engine`, znajduje się aktualny dump bazy danych. Jeśli nie, stwórz w katalogu głównym roota katalog o takiej nazwie i skopiuj tam zawartość katalogu `influxdb-engine` z repozytorium. Katalog będzie potem domontowany do kontenera jako katalog `/var/lib/influxdb2`. 
 4.	Stwórz w katalogu głównym roota katalog `stats-results` tam będą tymczasowo przechowywane wygenerowane raporty. Katalog potem będzie domontowany do kontenera jako katalog `/stats-results`
-5.	Będąc w katalogu repozytorium, zbuduj kontener za pomocą polecenia,
+5. Sprawdź czy w `Dockerfile` są odpowiednio wypełnione zmienne `RASSWORD` i `INFLUX_TOKEN`. Jeśli jest tam wpisany komentarz `#FILL` to musisz dostać plik z tymi zmiennymi. Jeśli nie został na serwerze po poprzedniej instalacji zapytaj autora tego featura o te zmienne, bo mogą one gwarantować dostęp do poprzednich danych.
+6.	Będąc w katalogu repozytorium, zbuduj kontener za pomocą polecenia,
 
 `docker build -t stats:0.2 .`
 
 nazwa obrazu i wersja są przykładowe, można użyć dowolnych.
 
-6.	Jeśli uruchamiałeś wcześniej kontener o nazwie ra-stats to usuń go poleceniem
+7.	Jeśli uruchamiałeś wcześniej kontener o nazwie ra-stats to usuń go poleceniem
 
 `docker rm -f ra-stats`
 
 bądź w następnym punkcie uruchom go z inną nazwą 
-7.	Uruchom kontener za pomocą następującej komendy:
+8.	Uruchom kontener za pomocą następującej komendy:
 
 ```
 docker run -d -p 8086:8086 --name ra-stats --dns 8.8.8.8 \
@@ -64,7 +65,7 @@ docker run -d -p 8086:8086 --name ra-stats --dns 8.8.8.8 \
     stats:0.2
 ```
 
-8.	Aby sprawdzić czy wszystko dobrze działa wyświetl logi z kontenera za pomocą polecenia
+9.	Aby sprawdzić czy wszystko dobrze działa wyświetl logi z kontenera za pomocą polecenia
 
 `docker logs ra-stats --tail 50 -f`
 
