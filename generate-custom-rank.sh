@@ -79,11 +79,9 @@ do
   esac
   SHOW_NAME=`echo ${PROGRAM_API_DATA} | jq '. | .[] | select(.program.slug=="'${SHOW_CODE}'") |  .program.rds ' | sed 's/\"//g' | head -1`
   line=`echo $line | sed "s/ /=/g"`
-  if [[ -z "$SHOW_NAME" ]]; then
-    echo "$line" >> ranking.txt
-    continue
+  if [[ ! -z "$SHOW_NAME" ]]; then
+    line=`echo $line | sed "s/$SHOW_CODE/$SHOW_NAME/g"`
   fi
-  line=`echo $line | sed "s/$SHOW_CODE/$SHOW_NAME/g"`
   line=`echo $line | sed "s/$SHOW_TYPE/$SHOW_TYPE_TEXT/g"`
   echo "$line" >> ranking.txt
 done <<< $(echo "$RANKING")
