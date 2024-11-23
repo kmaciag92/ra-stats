@@ -40,6 +40,7 @@ RUN chmod 0744 /stats/generate-custom-rank.sh
 ENV RASSWORD #FILL
 ENV INFLUX_TOKEN #FILL
 ENV RA_ADDRESS listen.radioaktywne.pl
+ENV RA_STREAM_ADDRESS $RA_ADDRESS:49327
 ENV GRANULATION 10
 ENV TZ Europe/Warsaw
 ENV PROGRAM_API_ADDRESS https://cloud.radioaktywne.pl/api/timeslots
